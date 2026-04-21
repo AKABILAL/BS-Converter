@@ -1,0 +1,3080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank Statement Converter by aka — Oracle Ready</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0c0e14;--surface:#14171f;--surface-raised:#1a1e28;--header-bg:#181c26;--border:#262b3a;--border-light:#1f233380;--row-alt:#12151c;--text:#e2e5eb;--text-muted:#6e7590;--accent:#3ee8d6;--accent-dim:#3ee8d620;--red:#f0544f;--green:#34d399;--amber:#fbbf24;--purple:#a78bfa}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.app-header{padding:24px 32px 18px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,var(--bg) 0%,#111420 100%);position:sticky;top:0;z-index:100}
+.header-inner{max-width:1520px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.app-title{font-size:24px;font-weight:700;letter-spacing:-0.5px}
+.app-title .diamond{color:var(--accent);margin-right:6px}
+.app-subtitle{font-size:12px;color:var(--text-muted);margin-top:2px;letter-spacing:.5px;text-transform:uppercase}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.header-actions select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer}
+.btn{padding:10px 20px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn-accent{background:var(--accent);color:var(--bg)}.btn-accent:hover{box-shadow:0 4px 20px var(--accent-dim)}
+.btn-purple{background:var(--purple);color:var(--bg)}.btn-purple:hover{box-shadow:0 4px 20px #a78bfa30}
+.btn-surface{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+
+.main{max-width:1520px;margin:0 auto;padding:24px 32px 80px}
+
+.dropzone{border:2px dashed var(--border);border-radius:16px;padding:52px 32px;text-align:center;cursor:pointer;transition:all .3s;background:var(--surface);position:relative;overflow:hidden}
+.dropzone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--accent-dim) 0%,transparent 70%);opacity:0;transition:opacity .3s}
+.dropzone:hover::before,.dropzone.drag-over::before{opacity:1}
+.dropzone.drag-over{border-color:var(--accent)}
+.dropzone-icon{font-size:48px;margin-bottom:10px;position:relative}
+.dropzone-title{font-size:18px;font-weight:600;position:relative}
+.dropzone-sub{font-size:12px;color:var(--text-muted);margin-top:6px;position:relative}
+
+.file-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.file-chip{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:var(--surface);font-size:12px;border:1px solid var(--border);animation:fadeIn .3s}
+.chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.chip-name{font-weight:600}.chip-meta{color:var(--text-muted)}
+.chip-file{color:var(--text-muted);font-size:11px;font-family:'JetBrains Mono',monospace}
+.chip-remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 2px;line-height:1}
+
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:24px 0 20px}
+.summary-card{padding:18px 22px;border-radius:12px;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);animation:slideUp .4s ease-out}
+.summary-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.summary-value{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono','DM Sans',monospace}
+
+.section-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.section-label{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px}
+.col-toggles{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:18px}
+.col-chip{display:inline-flex;align-items:center;gap:3px;padding:4px 6px 4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:12px;font-weight:500;transition:all .2s;user-select:none}
+.col-chip.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.col-chip.custom{border-color:var(--purple)}.col-chip.custom.active{background:var(--purple);color:var(--bg);border-color:var(--purple)}
+.col-chip.auto{border-color:var(--amber)}.col-chip.auto.active{background:var(--amber);color:var(--bg);border-color:var(--amber)}
+.col-chip .col-label{cursor:pointer}
+.col-chip .arrows{display:inline-flex;gap:0}
+.col-chip .arr-btn{background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0 2px;opacity:.55;line-height:1}
+.col-chip .arr-btn:hover{opacity:1}
+.col-chip .col-x{background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:0 3px;opacity:.55;line-height:1}
+.col-chip .col-x:hover{opacity:1}
+
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.filter-bar input,.filter-bar select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .2s}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
+.search-wrap{flex:1;min-width:200px;position:relative}
+.search-wrap input{width:100%;padding-left:32px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px}
+.btn-clear{padding:8px 14px;border-radius:8px;border:none;background:var(--red);color:#fff;font-size:12px;cursor:pointer;font-weight:600;font-family:inherit}
+
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);max-height:70vh;overflow-y:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table thead th{padding:11px 14px;text-align:left;background:var(--header-bg);color:var(--text);font-weight:600;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10;user-select:none;transition:background .2s}
+.data-table thead th:hover{background:var(--surface-raised)}
+.data-table tbody td{padding:8px 14px;border-bottom:1px solid var(--border-light);font-variant-numeric:tabular-nums}
+.data-table tbody tr:nth-child(even){background:var(--row-alt)}
+.data-table tbody tr:hover{background:var(--accent-dim)}
+.td-debit{color:var(--red);font-weight:500}.td-credit{color:var(--green);font-weight:500}
+.td-desc{max-width:340px;word-wrap:break-word}
+.td-num{font-family:'JetBrains Mono',monospace;font-size:12px}
+.td-custom{color:var(--purple)}.td-empty{padding:48px;text-align:center;color:var(--text-muted)}
+
+.pagination{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:13px;flex-wrap:wrap;gap:8px}
+.pagination .info{color:var(--text-muted)}
+.page-btns{display:flex;gap:4px}
+.pg-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:14px;font-family:inherit;transition:all .2s}
+.pg-btn:disabled{opacity:.35;cursor:default}.pg-btn:not(:disabled):hover{border-color:var(--accent)}
+.page-label{padding:6px 14px;font-size:13px;color:var(--text)}
+
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:40px}
+.step-card{padding:28px;border-radius:12px;background:var(--surface);border:1px solid var(--border);animation:slideUp .5s ease-out backwards}
+.step-card:nth-child(2){animation-delay:.08s}.step-card:nth-child(3){animation-delay:.16s}.step-card:nth-child(4){animation-delay:.24s}
+.step-icon{font-size:32px;margin-bottom:10px}.step-title{font-weight:700;font-size:15px;margin-bottom:6px}
+.step-desc{font-size:13px;color:var(--text-muted);line-height:1.6}
+
+.modal-overlay{position:fixed;inset:0;background:#00000088;z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s}
+.modal{background:var(--surface-raised);border:1px solid var(--border);border-radius:16px;padding:28px 32px;width:580px;max-width:92vw;max-height:90vh;overflow-y:auto;animation:slideUp .3s}
+.modal h3{font-size:18px;margin-bottom:4px}
+.modal .modal-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px}
+.modal label{font-size:13px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px}
+.modal input,.modal textarea{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;outline:none;margin-bottom:16px}
+.modal textarea{min-height:80px;resize:vertical}
+.modal input:focus,.modal textarea:focus{border-color:var(--accent)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.modal .tab-row{display:flex;gap:4px;margin-bottom:20px}
+.modal .tab-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.modal .tab-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.modal .tab-btn.tab-smart.active{background:var(--purple);border-color:var(--purple)}
+.formula-help{font-size:11px;color:var(--text-muted);line-height:1.7;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px}
+.formula-help code{background:var(--bg);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.smart-help{font-size:12px;color:var(--text-muted);line-height:1.7;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px}
+.smart-help strong{color:var(--text)}
+.smart-help .ex{display:block;margin:4px 0 2px;padding:4px 8px;background:var(--bg);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--purple)}
+.smart-status{font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px}
+.smart-status.success{background:#34d39918;color:var(--green)}
+.smart-status.error{background:#f0544f18;color:var(--red)}
+
+.export-badge{font-size:11px;background:var(--accent-dim);color:var(--accent);padding:3px 10px;border-radius:12px;font-weight:600}
+
+/* Context Menu */
+.ctx-menu{position:fixed;z-index:300;background:var(--surface-raised);border:1px solid var(--border);border-radius:10px;padding:6px 0;min-width:220px;max-height:70vh;overflow-y:auto;box-shadow:0 8px 32px #00000066;animation:fadeIn .15s}
+.ctx-menu-item{padding:8px 16px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text);transition:background .15s}
+.ctx-menu-item:hover{background:var(--accent-dim)}
+.ctx-menu-item .ctx-icon{font-size:14px;width:20px;text-align:center}
+.ctx-menu-sep{height:1px;background:var(--border);margin:4px 0}
+.ctx-menu-label{padding:6px 16px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.loading-bar{height:3px;background:linear-gradient(90deg,var(--accent),#3b82f6,var(--accent));background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:2px;margin-top:12px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+@media(max-width:768px){.app-header{padding:16px}.main{padding:16px 16px 60px}.dropzone{padding:36px 20px}.header-inner{flex-direction:column;align-items:flex-start}.summary-grid{grid-template-columns:1fr 1fr}.modal{padding:20px}}
+
+/* Date Format Switcher */
+.date-fmt-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.date-fmt-bar label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.date-fmt-bar select,.date-fmt-bar input{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.date-fmt-bar input{width:140px}
+.date-fmt-bar input:focus,.date-fmt-bar select:focus{border-color:var(--accent)}
+
+/* Deep Filter Panel */
+.deep-filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px;animation:slideUp .3s}
+.df-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.df-header h4{font-size:14px;font-weight:600;color:var(--accent)}
+.df-rules{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.df-rule{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.df-rule select,.df-rule input{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.df-rule select:focus,.df-rule input:focus{border-color:var(--accent)}
+.df-rule input{flex:1;min-width:120px}
+.df-rule .df-remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:2px 6px;opacity:.6}
+.df-rule .df-remove:hover{opacity:1}
+.df-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.df-actions .btn{padding:7px 14px;font-size:12px}
+.df-expr{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:8px}
+.df-expr:focus{border-color:var(--accent)}
+.df-expr-help{font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6}
+.df-expr-help code{background:var(--bg);padding:1px 4px;border-radius:3px;font-family:'JetBrains Mono',monospace}
+.df-presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.df-preset{padding:4px 12px;border-radius:16px;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);font-size:11px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;transition:all .2s}
+.df-preset:hover{border-color:var(--accent);color:var(--text)}
+.df-preset .preset-x{font-size:12px;opacity:.5;margin-left:2px}
+.df-preset .preset-x:hover{opacity:1;color:var(--red)}
+.df-tabs{display:flex;gap:4px;margin-bottom:12px}
+.df-tab{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.df-tab.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+/* Draggable columns */
+.col-chip.dragging{opacity:.4;transform:scale(.95)}
+.col-chip.drag-target{border-color:var(--accent);box-shadow:0 0 8px var(--accent-dim)}
+
+/* Amount Matcher */
+.amt-panel{background:var(--surface);border:1px solid var(--amber);border-radius:12px;padding:18px 22px;margin-bottom:16px;animation:slideUp .3s}
+.amt-panel h4{font-size:14px;font-weight:600;color:var(--amber);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.amt-panel h4 button{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px}
+.amt-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.amt-row input{flex:1;min-width:180px;padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:'JetBrains Mono',monospace;outline:none}
+.amt-row input:focus{border-color:var(--amber)}
+.amt-row select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;font-family:inherit}
+.amt-row .btn{padding:8px 18px;font-size:12px}
+.amt-results{margin-top:10px}
+.amt-result-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:8px}
+.amt-result-card h5{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--amber)}
+.amt-result-card .amt-info{font-size:12px;color:var(--text-muted);margin-bottom:6px;line-height:1.5}
+.amt-result-card .amt-info strong{color:var(--text)}
+.amt-match-btn{background:var(--amber);color:var(--bg);border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px}
+.amt-match-btn:hover{opacity:.85}
+.amt-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-right:4px}
+.amt-tag.exact{background:#34d39920;color:var(--green)}
+.amt-tag.sum{background:#a78bfa20;color:var(--purple)}
+.amt-tag.close{background:#fbbf2420;color:var(--amber)}
+.amt-none{color:var(--text-muted);font-size:13px;padding:16px;text-align:center}
+
+/* View Tabs */
+.view-tabs{display:flex;gap:6px;margin-bottom:18px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:12px;width:fit-content}
+.view-tab{padding:10px 24px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.view-tab.active{background:var(--accent);color:var(--bg)}
+.view-tab:hover:not(.active){background:var(--surface-raised);color:var(--text)}
+
+/* Analytics Dashboard */
+.analytics{animation:fadeIn .3s}
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;min-height:340px}
+.chart-card h4{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--accent);display:flex;align-items:center;gap:6px}
+.chart-card canvas{width:100%!important;max-height:300px}
+.slicer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.slicer-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;max-height:400px;overflow-y:auto}
+.slicer-card h4{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--purple);display:flex;align-items:center;gap:6px}
+.slicer-table{width:100%;border-collapse:collapse;font-size:12px}
+.slicer-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;background:var(--surface)}
+.slicer-table td{padding:7px 10px;border-bottom:1px solid var(--border-light);font-variant-numeric:tabular-nums}
+.slicer-table tr:hover{background:var(--accent-dim)}
+.slicer-table .num{text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px}
+.slicer-table .pos{color:var(--green)}.slicer-table .neg{color:var(--red)}
+
+@media(max-width:900px){.analytics-grid,.slicer-grid{grid-template-columns:1fr}}
+
+/* Per-Column Filters */
+.data-table thead tr.filter-row th{padding:4px 6px;background:var(--bg);border-bottom:2px solid var(--accent);position:sticky;top:39px;z-index:9}
+.col-filter-wrap{position:relative;display:flex;align-items:center;gap:2px}
+.col-filter{flex:1;padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-family:inherit;outline:none;transition:border-color .2s}
+.col-filter:focus{border-color:var(--accent)}
+.col-filter::placeholder{color:var(--text-muted);font-size:10px}
+.col-filter-active{border-color:var(--accent)!important;box-shadow:0 0 0 1px var(--accent-dim)}
+.col-filter-clear{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:0 2px;line-height:1;display:none}
+.col-filter-wrap.has-val .col-filter-clear{display:block}
+.col-dd-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:1px 3px;line-height:1;transition:color .2s}
+.col-dd-btn:hover{color:var(--accent)}
+
+/* Drill-down Dropdown */
+.col-dropdown{position:absolute;top:100%;left:0;right:0;min-width:180px;max-height:280px;background:var(--surface-raised);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px #00000055;z-index:200;overflow:hidden;animation:fadeIn .15s;display:flex;flex-direction:column}
+.col-dd-search{padding:6px 8px;border-bottom:1px solid var(--border)}
+.col-dd-search input{width:100%;padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:11px;font-family:inherit;outline:none}
+.col-dd-search input:focus{border-color:var(--accent)}
+.col-dd-actions{display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border)}
+.col-dd-actions button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:10px;font-weight:600;font-family:inherit;padding:2px 6px}
+.col-dd-actions button:hover{text-decoration:underline}
+.col-dd-list{overflow-y:auto;flex:1;padding:4px 0}
+.col-dd-item{display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;font-size:11px;transition:background .15s;color:var(--text)}
+.col-dd-item:hover{background:var(--accent-dim)}
+.col-dd-item input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
+.col-dd-item .dd-count{margin-left:auto;color:var(--text-muted);font-size:10px;font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div>
+      <div class="app-title"><span class="diamond">◆</span>Bank Statement Converter <span style="color:var(--purple);font-weight:500;">by aka</span></div>
+      <div class="app-subtitle">Parse · Transform · Export — Oracle-Ready Output</div>
+    </div>
+    <div class="header-actions" id="headerActions" style="display:none;">
+      <select id="pageSizeSelect" onchange="changePageSize(this.value)">
+        <option value="50">50 rows</option><option value="100" selected>100 rows</option><option value="250">250 rows</option><option value="500">500 rows</option><option value="1000">1,000 rows</option><option value="5000">5,000 rows</option><option value="10000">10,000 rows</option><option value="25000">25,000 rows</option>
+      </select>
+      <button class="btn btn-purple" onclick="openModal()">＋ Custom Column</button>
+      <button class="btn btn-surface" onclick="toggleAmountMatcher()" style="border-color:var(--amber);color:var(--amber)">🔎 Amount Matcher</button>
+      <button class="btn btn-accent" onclick="exportToExcel()">⬇ Export View</button>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+    <div class="dropzone-icon">📄</div>
+    <div class="dropzone-title" id="dropzoneTitle">Drop bank statement(s) here</div>
+    <div class="dropzone-sub">.xlsx, .xls, .csv — Supports all major bank statement formats</div>
+    <div id="loadingBar" style="display:none;" class="loading-bar"></div>
+  </div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple hidden onchange="handleFileSelect(this.files)">
+  <div class="file-chips" id="fileChips"></div>
+
+  <div id="dataArea" style="display:none;">
+    <div class="summary-grid" id="summaryCards"></div>
+
+    <!-- View Toggle — prominent placement -->
+    <div class="view-tabs" id="viewTabs" style="display:none;">
+      <button class="view-tab active" id="viewTabTable" onclick="switchView('table')">📋 Table View</button>
+      <button class="view-tab" id="viewTabAnalytics" onclick="switchView('analytics')">📊 Analytics & Slicers</button>
+    </div>
+
+    <!-- Amount Matcher Panel -->
+    <div id="amtPanel" style="display:none" class="amt-panel">
+      <h4>🔎 Amount Matcher — Verify & Trace Amounts <button onclick="toggleAmountMatcher()">✕</button></h4>
+      <div class="amt-row">
+        <input id="amtInput" type="text" placeholder="Enter amount (e.g. 3577973 or 3,577,973)" onkeydown="if(event.key==='Enter')runAmountMatch()">
+        <select id="amtField">
+          <option value="debit">In Debit</option>
+          <option value="credit">In Credit</option>
+          <option value="both">In Debit or Credit</option>
+          <option value="balance">In Balance</option>
+          <option value="net_amount">In Net Amount</option>
+        </select>
+        <select id="amtScope">
+          <option value="all">Search All Data</option>
+          <option value="filtered">Search Filtered View</option>
+        </select>
+        <select id="amtTolerance">
+          <option value="0">Exact Match</option>
+          <option value="1">± 1</option>
+          <option value="10">± 10</option>
+          <option value="100">± 100</option>
+        </select>
+        <button class="btn" style="background:var(--amber);color:var(--bg)" onclick="runAmountMatch()">Search</button>
+      </div>
+      <div id="amtResults"></div>
+    </div>
+
+    <div id="tableViewArea">
+    <div class="section-row">
+      <div class="section-label">Output Columns — click toggle · ◂▸ reorder</div>
+      <div id="exportBadge" class="export-badge" style="display:none;"></div>
+    </div>
+    <div class="col-toggles" id="colToggles"></div>
+
+    <!-- Date Format Switcher -->
+    <div class="date-fmt-bar" id="dateFmtBar" style="display:none;">
+      <label>📅 Date Format:</label>
+      <select id="dateFmtSelect" onchange="changeDateFormat(this.value)">
+        <option value="DD-MM-YYYY" selected>DD-MM-YYYY</option>
+        <option value="MM-DD-YYYY">MM-DD-YYYY</option>
+        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+        <option value="DD-Mon-YYYY">DD-Mon-YYYY</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <input id="dateFmtCustom" placeholder="e.g. YYYY/DD/MM" style="display:none;" onchange="changeDateFormat(this.value)">
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="search-wrap"><span class="search-icon">🔍</span><input id="filterSearch" placeholder="Search descriptions, references..." oninput="applyFilters()"></div>
+      <select id="filterType" onchange="applyFilters()"><option value="all">All Transactions</option><option value="debit">Debits Only</option><option value="credit">Credits Only</option></select>
+      <input type="date" id="filterDateFrom" onchange="applyFilters()" title="From Date">
+      <input type="date" id="filterDateTo" onchange="applyFilters()" title="To Date">
+      <button class="btn-clear" id="btnClear" onclick="clearFilters()" style="display:none;">Clear</button>
+      <button class="btn btn-surface" style="padding:7px 14px;font-size:12px;" onclick="toggleDeepFilter()">🔬 Deep Filter</button>
+    </div>
+
+    <!-- Deep Filter Panel -->
+    <div id="deepFilterPanel" style="display:none;" class="deep-filter-panel">
+      <div class="df-header">
+        <h4>🔬 Deep Filter</h4>
+        <button class="btn btn-surface" style="padding:5px 12px;font-size:11px;" onclick="toggleDeepFilter()">✕ Close</button>
+      </div>
+      <div class="df-tabs">
+        <button class="df-tab active" id="dfTabRules" onclick="switchDfTab('rules')">Column Rules</button>
+        <button class="df-tab" id="dfTabExpr" onclick="switchDfTab('expr')">Expression</button>
+      </div>
+      <!-- Rules Tab -->
+      <div id="dfRulesPane">
+        <div class="df-rules" id="dfRules"></div>
+        <div class="df-actions">
+          <button class="btn btn-surface" onclick="addDfRule()">＋ Add Rule</button>
+          <button class="btn btn-accent" onclick="applyDeepFilter()">Apply Filter</button>
+          <button class="btn btn-surface" onclick="clearDeepFilter()">Clear</button>
+          <button class="btn btn-surface" style="margin-left:auto;" onclick="savePreset()">💾 Save Preset</button>
+        </div>
+      </div>
+      <!-- Expression Tab -->
+      <div id="dfExprPane" style="display:none;">
+        <input class="df-expr" id="dfExprInput" placeholder='e.g. debit > 50000 && description.includes("ATM")'>
+        <div class="df-expr-help">
+          <strong>Variables:</strong> <code>debit</code>, <code>credit</code>, <code>balance</code>, <code>description</code>, <code>reference</code>, <code>trans_date</code>, <code>bank_name</code>, <code>net_amount</code>, <code>sr_no</code><br>
+          <strong>Examples:</strong> <code>debit > 50000 && description.includes("ATM")</code> · <code>credit > 100000 || balance < 0</code> · <code>!description.includes("SALARY")</code>
+        </div>
+        <div class="df-actions">
+          <button class="btn btn-accent" onclick="applyExprFilter()">Apply Expression</button>
+          <button class="btn btn-surface" onclick="clearDeepFilter()">Clear</button>
+          <button class="btn btn-surface" style="margin-left:auto;" onclick="savePreset()">💾 Save Preset</button>
+        </div>
+      </div>
+      <!-- Saved Presets -->
+      <div class="df-presets" id="dfPresets"></div>
+    </div>
+    <div class="table-wrap" id="tableWrap"></div>
+    <div class="pagination" id="pagination"></div>
+    </div><!-- end tableViewArea -->
+
+    <!-- Analytics Dashboard -->
+    <div id="analyticsPanel" style="display:none;" class="analytics">
+      <div class="analytics-grid">
+        <div class="chart-card"><h4>📊 Monthly Debit vs Credit</h4><canvas id="chartBar"></canvas></div>
+        <div class="chart-card"><h4>📈 Balance Trend</h4><canvas id="chartLine"></canvas></div>
+        <div class="chart-card"><h4>🍩 Payment/Receipt Split</h4><canvas id="chartDonut"></canvas></div>
+        <div class="chart-card"><h4>🥧 Category Breakdown</h4><canvas id="chartPie"></canvas></div>
+      </div>
+      <div class="slicer-grid">
+        <div class="slicer-card"><h4>📅 Monthly Summary</h4><div id="slicerMonthly"></div></div>
+        <div class="slicer-card"><h4>🏦 Bank-wise Comparison</h4><div id="slicerBank"></div></div>
+        <div class="slicer-card"><h4>🏷️ Category-wise Breakdown</h4><div id="slicerCategory"></div></div>
+        <div class="slicer-card"><h4>📆 Daily Transaction Volume</h4><div id="slicerDaily"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps-grid" id="stepsGrid">
+    <div class="step-card"><div class="step-icon">📤</div><div class="step-title">Upload</div><div class="step-desc">Drop one or multiple bank statement files (.xlsx, .xls, .csv) from any supported Pakistani bank</div></div>
+    <div class="step-card"><div class="step-icon">🔍</div><div class="step-title">Auto-Detect</div><div class="step-desc">Detects bank format, maps columns, normalizes dates & amounts automatically</div></div>
+    <div class="step-card"><div class="step-icon">⚙️</div><div class="step-title">Customize</div><div class="step-desc">Toggle & reorder columns, add formula or smart custom columns, filter & sort freely</div></div>
+    <div class="step-card"><div class="step-icon">📥</div><div class="step-title">Export View</div><div class="step-desc">Export exactly what you see — filtered rows, selected columns, in the exact order shown</div></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>Add Custom Column</h3>
+    <div class="modal-sub">Create a new column using a formula or smart prompt</div>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabFormula" onclick="switchTab('formula')">⚡ Formula</button>
+      <button class="tab-btn tab-smart" id="tabSmart" onclick="switchTab('smart')">🧠 Smart Prompt</button>
+    </div>
+
+    <!-- Formula Tab -->
+    <div id="formulaPane">
+      <label>Column Name</label>
+      <input id="fColName" placeholder="e.g. Tax Amount">
+      <label>Formula Expression</label>
+      <input id="fExpression" placeholder="e.g. debit * 0.17">
+      <div class="formula-help">
+        <strong>Available variables:</strong> <code>debit</code>, <code>credit</code>, <code>balance</code>, <code>net_amount</code>, <code>sr_no</code>, <code>description</code>, <code>reference</code>, <code>trans_date</code>, <code>value_date</code>, <code>bank_name</code>, <code>dr_cr_indicator</code><br><br>
+        <strong>Math & Logic:</strong><br>
+        <code>debit * 0.17</code> — GST on debits<br>
+        <code>(debit || 0) + (credit || 0)</code> — total movement<br>
+        <code>debit > 100000 ? "High" : "Normal"</code> — categorize<br>
+        <code>balance &lt; 0 ? "Overdrawn" : "OK"</code> — status check<br><br>
+        <strong>Extract & Parse:</strong><br>
+        <code>(description.match(/(?:ACCT?|A\/C|ACCOUNT)[:\s]*(\d{5,})/i)||["",""])[1]</code> — account no<br>
+        <code>(description.match(/Doc\s*No[:\s]*(\d+)/i)||["",""])[1]</code> — doc number<br>
+        <code>(description.match(/Br[:\s]*(\d+)/i)||["",""])[1]</code> — branch code<br>
+        <code>(description.match(/03\d{9}/)||[""])[0]</code> — phone number<br>
+        <code>description.split("/").map(s=>s.trim())[0]</code> — first part before /<br>
+        <code>description.replace(/\d+/g,"").trim()</code> — remove all numbers
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-surface" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-accent" onclick="addFormulaCol()">Add Column</button>
+      </div>
+    </div>
+
+    <!-- Smart Prompt Tab -->
+    <div id="smartPane" style="display:none;">
+      <label>Column Name</label>
+      <input id="sColName" placeholder="e.g. Category">
+      <label>Describe what this column should contain</label>
+      <textarea id="sPrompt" placeholder="e.g. Categorize as Salary, Utility, Shopping, Transfer, Cash, or Other"></textarea>
+      <div class="smart-help">
+        <strong>Works offline — no API needed!</strong> The smart engine understands prompts like:<br>
+        <span class="ex">Categorize as Salary, Utility, Shopping, Transfer, Cash, or Other</span>
+        <span class="ex">Label each debit value as 200 and each credit value as 300</span>
+        <span class="ex">Flag transactions above 50000 as High Value</span>
+        <span class="ex">Extract account number from description</span>
+        <span class="ex">Extract phone/mobile number from description</span>
+        <span class="ex">Get the text after the dash in description</span>
+        <span class="ex">Extract first 3 words from description</span>
+        <span class="ex">Extract numbers from reference field</span>
+        <span class="ex">Split description and get the beneficiary name</span>
+        <span class="ex">Show transaction type: Incoming or Outgoing</span>
+        <span class="ex">Calculate 17% GST on debit amounts</span>
+        <span class="ex">Extract month name from transaction date</span>
+        <span class="ex">Show amount range/bucket/slab</span>
+      </div>
+      <div id="smartStatus" style="display:none;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-surface" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-purple" onclick="addSmartCol()">🧠 Generate Column</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// BANKS & COLUMNS
+// ═══════════════════════════════════════════
+const BANKS={HBL:{name:"Habib Bank Limited",color:"#006747",sigs:["habib bank","habibbank","hbl statement","hbl account"]},UBL:{name:"United Bank Limited",color:"#1B3A5C",sigs:["united bank","ubl statement","ubl account","ubl limited"]},MCB:{name:"MCB Bank",color:"#800020",sigs:["mcb bank","mcb statement","muslim commercial","mcb limited"]},ABL:{name:"Allied Bank Limited",color:"#003366",sigs:["allied bank","abl statement","abl account","abl limited"]},MEEZAN:{name:"Meezan Bank",color:"#00703C",sigs:["meezan bank","meezan statement","mebl","meezan limited"]},BAFL:{name:"Bank Alfalah",color:"#C8102E",sigs:["bank alfalah","alfalah statement","bafl","alfalah limited"]},FAYSAL:{name:"Faysal Bank",color:"#003D6B",sigs:["faysal bank","faysal statement","fbl","faysal limited"]},JSBL:{name:"JS Bank",color:"#ED1C24",sigs:["js bank","jsbl","js statement","js limited"]},ASKARI:{name:"Askari Bank",color:"#1C4587",sigs:["askari bank","askari statement","akbl","askari limited"]},SCB:{name:"Standard Chartered",color:"#0072AA",sigs:["standard chartered","scb statement","scb account","scb pakistan"]},CITI:{name:"Citibank",color:"#003B70",sigs:["citibank","citi bank","citi statement","citi pakistan"]}};
+const BASE_COLS=[{key:"sr_no",label:"Sr. No.",dflt:true},{key:"trans_date",label:"Transaction Date",dflt:true},{key:"value_date",label:"Value Date",dflt:true},{key:"description",label:"Description / Narration",dflt:true},{key:"reference",label:"Reference / Cheque No",dflt:true},{key:"debit",label:"Debit (PKR)",dflt:true},{key:"credit",label:"Credit (PKR)",dflt:true},{key:"balance",label:"Running Balance (PKR)",dflt:true},{key:"bank_name",label:"Bank Name",dflt:false},{key:"account_no",label:"Account Number",dflt:false},{key:"currency",label:"Currency",dflt:false},{key:"dr_cr_indicator",label:"Dr/Cr Indicator",dflt:false},{key:"net_amount",label:"Net Amount",dflt:false}];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let S={files:[],merged:[],sorted:[],cols:BASE_COLS.map(c=>({key:c.key,label:c.label,type:"base",active:c.dflt})),customDefs:[],sortKey:null,sortDir:"asc",page:1,pageSize:100,
+  dateFmt:"DD-MM-YYYY",
+  dfRules:[],     // [{col,op,val}]
+  dfExpr:"",      // expression string
+  dfActive:false, // deep filter active?
+  presets:[],     // [{name, rules?, expr?}]
+  colFilters:{},  // {colKey: filterValue}
+};
+let cid=0;
+
+// ═══════════════════════════════════════════
+// PARSING — Smart Column Detection Engine
+// ═══════════════════════════════════════════
+const norm=t=>(t||"").toString().toLowerCase().replace(/[^a-z0-9\s]/g,"").trim();
+const normStrict=t=>(t||"").toString().toLowerCase().replace(/[^a-z0-9]/g,"");
+
+function detectBank(d,f){
+  // ── Step 1: Aggressively parse filename ──
+  const rawName = (f||"").replace(/\.[^.]+$/, ""); // strip extension
+  const fnLower = rawName.toLowerCase();
+  // Split filename into tokens by any separator
+  const fnTokens = fnLower.split(/[\s_\-\.\,\(\)\[\]]+/).filter(t => t.length > 0);
+  const fnJoined = fnTokens.join(" ");
+
+  // Short codes and aliases for filename matching
+  const fnPatterns = {
+    HBL:  /\bhbl\b/i,
+    UBL:  /\bubl\b/i,
+    MCB:  /\bmcb\b/i,
+    ABL:  /\babl\b/i,
+    MEEZAN: /\bmeezan\b|\bmebl\b/i,
+    BAFL: /\balfalah\b|\bbafl\b/i,
+    FAYSAL: /\bfaysal\b|\bfbl\b/i,
+    JSBL: /\bjs\s*bank\b|\bjsbl\b/i,
+    ASKARI: /\baskari\b|\bakbl\b/i,
+    SCB:  /\bscb\b|\bstandard\s*chartered\b/i,
+    CITI: /\bciti\b|\bcitibank\b/i,
+  };
+
+  // Check filename first — strongest signal
+  for (const [code, rx] of Object.entries(fnPatterns)) {
+    if (rx.test(fnJoined) || rx.test(fnLower)) {
+      return code;
+    }
+  }
+
+  // ── Step 2: Check header/metadata rows (first 15 rows) ──
+  const headerBlob = d.slice(0, Math.min(15, d.length)).map(r => 
+    Array.isArray(r) ? r.join(" ") : String(r)
+  ).join(" ").toLowerCase();
+
+  let bestCode = "UNKNOWN", bestScore = 0;
+  for (const [code, bk] of Object.entries(BANKS)) {
+    let score = 0;
+    for (const sig of bk.sigs) {
+      if (sig.includes(" ") && headerBlob.includes(sig)) score += 8;
+      else {
+        const sigRx = new RegExp("(?:^|[\\s,\\.\\-\\/\\(])" + sig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "(?:$|[\\s,\\.\\-\\/\\)])", "i");
+        if (sigRx.test(headerBlob)) score += 5;
+      }
+    }
+    if (score > bestScore) { bestScore = score; bestCode = code; }
+  }
+  return bestCode;
+}
+
+// Expanded keyword list for header row detection
+function findHdr(d){
+  const kw=["date","description","debit","credit","balance","narration","withdrawal","deposit","particulars","amount","details","posting","slip","transfer","fund","branch","reference","cheque","instrument","transaction","value","running","dr","cr","payment","receipt","opening"];
+  let best=0,bs=0;
+  for(let i=0;i<Math.min(d.length,25);i++){
+    const r=d[i];if(!r)continue;
+    const score=r.reduce((a,c)=>{const n=normStrict(c);return a+(kw.some(k=>n.includes(k))?1:0);},0);
+    if(score>bs){bs=score;best=i;}
+  }
+  return best;
+}
+
+// ── Smart Column Classifier ──
+// Returns: {role, priority} where role is the standard mapping
+// Priority lets us pick the best match when multiple columns could map to the same role
+function classifyColumn(header) {
+  const n = normStrict(header);
+  const nl = norm(header); // with spaces preserved
+
+  // ═══ DATE COLUMNS ═══
+  // Transaction date / posting date / slip date — primary date
+  if (/^(?:trans(?:action)?|posting|tran|txn)\s*date/i.test(nl) || 
+      /depositslipdate|slipdate/i.test(n) ||
+      /transdate|trandate|postingdate|txndate/i.test(n))
+    return { role: "trans_date", priority: 10 };
+  
+  // Value date / fund transfer date / clearing date
+  if (/valuedate|fundtransferdate|clearingdate|cleardate|settlementdate|effectivedate/i.test(n))
+    return { role: "value_date", priority: 10 };
+  
+  // Generic "date" — only if nothing else matched (lower priority)
+  if (n === "date" || /^date$/i.test(nl))
+    return { role: "trans_date", priority: 5 };
+
+  // ═══ DESCRIPTION / NARRATION ═══
+  if (/description|narration|particulars|transactiondetail|txndetail/i.test(n))
+    return { role: "description", priority: 10 };
+  if (/detail/i.test(n) && !/date|amount|slip/i.test(n))
+    return { role: "description", priority: 5 };
+
+  // ═══ DEBIT / WITHDRAWAL / PAYMENT ═══
+  if (/debit|withdraw|moneyout|dramount|paymentamount|paidamount/i.test(n) || n === "dr")
+    return { role: "debit", priority: 10 };
+  if (/payment(?!.*date)/i.test(n) && /amount/i.test(n))
+    return { role: "debit", priority: 7 };
+
+  // ═══ CREDIT / DEPOSIT / RECEIPT ═══
+  if (/credit(?!.*card)|deposit(?!.*slip\s*(?:no|date))|moneyin|cramount|receiptamount|received/i.test(n) || n === "cr")
+    return { role: "credit", priority: 10 };
+  // "Deposit Slip Amount" or "Deposit Amount" — this is credit
+  if (/depositslipamount|depositamount/i.test(n))
+    return { role: "credit", priority: 10 };
+  // Generic "amount" with deposit/receipt context
+  if (/amount/i.test(n) && /deposit|receipt|slip/i.test(n))
+    return { role: "credit", priority: 8 };
+
+  // ═══ BALANCE ═══
+  if (/balance|running|closing|availbal/i.test(n))
+    return { role: "balance", priority: 10 };
+
+  // ═══ REFERENCE / CHEQUE ═══
+  if (/cheque\s*no|chequeno|cheqno|chqno|checkno/i.test(n))
+    return { role: "cheque_no", priority: 10 };
+  if (/reference|refno|instruno|instrumentno/i.test(n) && !/reference\s*2|reference2/i.test(n))
+    return { role: "reference", priority: 8 };
+
+  // ═══ NATURE / REF# / TYPE / CODE from source (for classification hints) ═══
+  if (/^nature$/i.test(nl) || /^cr[\s\/]*dr$/i.test(nl) || /^dr[\s\/]*cr$/i.test(nl))
+    return { role: "extra", priority: 0, extraLabel: "Nature" };
+  if (/^ref#$/i.test(nl) || /^ref\s*type$/i.test(nl))
+    return { role: "_ref_tag", priority: 0 };
+  if (/^type$/i.test(nl) && n.length < 6)
+    return { role: "_src_type", priority: 0 };
+  if (/^code$/i.test(nl) && n.length < 6)
+    return { role: "_src_code", priority: 0 };
+
+  // ═══ SINGLE AMOUNT COLUMN (no debit/credit split) ═══
+  // Generic "amount" without deposit/debit/credit qualifier
+  if (/^amount$/i.test(nl) || n === "amount" || /transactionamount|txnamount/i.test(n))
+    return { role: "amount_single", priority: 5 };
+
+  // ═══ EXTRA COLUMNS (auto-detect) ═══
+  if (/branchcode|brcode/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Branch Code" };
+  if (/branchname|brname/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Branch Name" };
+  if (/reference\s*[\-_]?\s*1|reference1|ref1/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Reference-1" };
+  if (/reference\s*[\-_]?\s*2|reference2|ref2/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Reference-2" };
+  if (/reference\s*[\-_]?\s*3|reference3|ref3/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Reference-3" };
+  if (/depositslipno|slipno|depositno/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Deposit Slip No" };
+  if (/transactionid|txnid|tranid/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Transaction ID" };
+  if (/channel|mode|medium|source/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Channel" };
+  if (/remarks?/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Remarks" };
+  if (/status/i.test(n)) return { role: "extra", priority: 0, extraLabel: "Status" };
+  if (/beneficiary|payee|receiver/i.test(n)) return { role: "extra", priority: 0, extraLabel: header.toString().trim() };
+  if (/category|type/i.test(n) && !/date|amount/i.test(n)) return { role: "extra", priority: 0, extraLabel: header.toString().trim() };
+
+  return null;
+}
+
+function pNum(v){if(v==null||v==="")return null;if(typeof v==="number")return v;const s=v.toString().replace(/[,\s]/g,"").replace(/\(/,"-").replace(/\)/,"");const n=parseFloat(s);return isNaN(n)?null:n;}
+
+function fD(dd,mm,yyyy){
+  return String(dd).padStart(2,"0")+"-"+String(mm).padStart(2,"0")+"-"+yyyy;
+}
+
+function pDate(v){
+  if(!v && v!==0) return "";
+
+  // ── Handle JavaScript Date objects (from cellDates:true) ──
+  if(v instanceof Date){
+    // Use UTC to avoid timezone shifts
+    if(!isNaN(v.getTime())){
+      return fD(v.getUTCDate(), v.getUTCMonth()+1, v.getUTCFullYear());
+    }
+    return "";
+  }
+
+  // ── Handle Excel serial number ──
+  if(typeof v==="number"){
+    // Excel date serial to UTC date
+    const d = new Date(Math.round((v - 25569)*864e5));
+    if(!isNaN(d.getTime())){
+      return fD(d.getUTCDate(), d.getUTCMonth()+1, d.getUTCFullYear());
+    }
+    return "";
+  }
+
+  const s = v.toString().trim();
+  if(!s) return "";
+
+  // ── Try common date string formats ──
+
+  // Format: DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY (Pakistani/international standard)
+  let m = s.match(/^(\d{1,2})\s*[\-\/\.]\s*(\d{1,2})\s*[\-\/\.]\s*(\d{4})$/);
+  if(m){
+    const [_,a,b,c] = m.map(Number);
+    // a and b could be DD-MM or MM-DD
+    // For Pakistani banks, assume DD-MM-YYYY
+    // But validate: if a>12, it must be the day; if b>12, b must be the day
+    if(a>12) return fD(a, b, c);   // a is definitely day
+    if(b>12) return fD(b, a, c);   // b is definitely day (so a is month)
+    // Both ≤12: assume DD-MM-YYYY (Pakistani convention)
+    return fD(a, b, c);
+  }
+
+  // Format: YYYY-MM-DD or YYYY/MM/DD
+  m = s.match(/^(\d{4})\s*[\-\/\.]\s*(\d{1,2})\s*[\-\/\.]\s*(\d{1,2})$/);
+  if(m){
+    const [_,y,mo,d] = m.map(Number);
+    return fD(d, mo, y);
+  }
+
+  // Format: DD-MM-YY or DD/MM/YY
+  m = s.match(/^(\d{1,2})\s*[\-\/\.]\s*(\d{1,2})\s*[\-\/\.]\s*(\d{2})$/);
+  if(m){
+    const [_,a,b,c] = m.map(Number);
+    const yr = c > 50 ? 1900+c : 2000+c;
+    if(a>12) return fD(a, b, yr);
+    if(b>12) return fD(b, a, yr);
+    return fD(a, b, yr); // DD-MM-YY
+  }
+
+  // Format: "DD Mon YYYY" or "DD-Mon-YYYY" (e.g. "02 Mar 2026", "02-Mar-2026")
+  const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  m = s.match(/^(\d{1,2})\s*[\-\/\s]\s*([a-z]{3,9})\s*[\-\/\s,]\s*(\d{4}|\d{2})$/i);
+  if(m){
+    const day = parseInt(m[1]);
+    const mon = months[m[2].toLowerCase().slice(0,3)];
+    let yr = parseInt(m[3]); if(yr<100) yr = yr>50?1900+yr:2000+yr;
+    if(mon) return fD(day, mon, yr);
+  }
+
+  // Format: "Mon DD, YYYY" (e.g. "Mar 02, 2026")
+  m = s.match(/^([a-z]{3,9})\s+(\d{1,2})\s*[,]?\s*(\d{4}|\d{2})$/i);
+  if(m){
+    const mon = months[m[1].toLowerCase().slice(0,3)];
+    const day = parseInt(m[2]);
+    let yr = parseInt(m[3]); if(yr<100) yr = yr>50?1900+yr:2000+yr;
+    if(mon) return fD(day, mon, yr);
+  }
+
+  // Last resort: try native Date parse but extract UTC parts to avoid timezone issues
+  const fallback = new Date(s);
+  if(!isNaN(fallback.getTime())){
+    // WARNING: Native parse of "MM-DD-YYYY" strings — may swap month/day
+    // We already tried structured parsing above, so this is truly last resort
+    return fD(fallback.getUTCDate(), fallback.getUTCMonth()+1, fallback.getUTCFullYear());
+  }
+
+  return s; // Return raw if nothing works
+}
+
+function processFile(data,fn){
+  const bc=detectBank(data,fn), hi=findHdr(data), hd=data[hi]||[];
+  const bn=BANKS[bc]?.name||"Unknown Bank";
+
+  // ── Map each header to its role using the smart classifier ──
+  const colMap = {}; // role -> {idx, priority}
+  const extraCols = []; // [{idx, label, key}]
+  let extraIdx = 0;
+
+  hd.forEach((h, i) => {
+    if (!h && h !== 0) return;
+    const cls = classifyColumn(h.toString());
+    if (!cls) {
+      // Unmapped column with a real header — add as extra if it has content
+      const headerStr = h.toString().trim();
+      if (headerStr && headerStr.length > 1 && !/^\d+$/.test(headerStr)) {
+        const key = "extra_" + (extraIdx++);
+        extraCols.push({ idx: i, label: headerStr, key });
+      }
+      return;
+    }
+
+    if (cls.role === "extra") {
+      const key = "extra_" + (extraIdx++);
+      extraCols.push({ idx: i, label: cls.extraLabel || h.toString().trim(), key });
+      return;
+    }
+
+    // For standard roles, keep the highest priority match
+    if (!colMap[cls.role] || cls.priority > colMap[cls.role].priority) {
+      colMap[cls.role] = { idx: i, priority: cls.priority };
+    }
+  });
+
+  // ── Resolve mappings ──
+  const cm = {};
+  for (const [role, info] of Object.entries(colMap)) cm[role] = info.idx;
+
+  // If no value_date, use trans_date
+  if (cm.value_date === undefined && cm.trans_date !== undefined) cm.value_date = cm.trans_date;
+  // If no trans_date but value_date exists, use it
+  if (cm.trans_date === undefined && cm.value_date !== undefined) cm.trans_date = cm.value_date;
+
+  // If cheque_no found but no reference, use cheque_no as reference
+  if (cm.reference === undefined && cm.cheque_no !== undefined) cm.reference = cm.cheque_no;
+
+  // ── Handle single-amount column (no debit/credit split) ──
+  const hasSingleAmount = cm.amount_single !== undefined && cm.debit === undefined && cm.credit === undefined;
+  // Also handle: if we have credit but no debit (deposit-only statement), or vice versa
+  const hasOnlyCredit = cm.credit !== undefined && cm.debit === undefined;
+  const hasOnlyDebit = cm.debit !== undefined && cm.credit === undefined;
+
+  // ── Register extra columns in state ──
+  const fileExtraCols = extraCols.map(ec => ({
+    key: fn.replace(/[^a-z0-9]/gi,"_") + "_" + ec.key,
+    label: ec.label,
+    idx: ec.idx,
+  }));
+
+  // ── Parse rows ──
+  const rows = data.slice(hi + 1);
+  const out = [];
+  let sr = 1;
+
+  for (const r of rows) {
+    if (!r || r.every(c => !c && c !== 0)) continue;
+
+    const td = cm.trans_date !== undefined ? pDate(r[cm.trans_date]) : "";
+    const desc = cm.description !== undefined ? (r[cm.description] || "").toString().trim() : "";
+    if (!td && !desc) continue;
+
+    let dr = null, cr = null;
+
+    if (hasSingleAmount) {
+      // Single amount column — need to figure out direction
+      const amt = pNum(r[cm.amount_single]);
+      if (amt !== null) {
+        if (amt < 0) dr = Math.abs(amt);
+        else cr = amt;
+      }
+    } else {
+      if (cm.debit !== undefined) dr = pNum(r[cm.debit]);
+      if (cm.credit !== undefined) cr = pNum(r[cm.credit]);
+    }
+
+    // Clean zero amounts to null
+    if (dr === 0) dr = null;
+    if (cr === 0) cr = null;
+
+    const row = {
+      sr_no: sr++,
+      trans_date: td,
+      value_date: cm.value_date !== undefined ? pDate(r[cm.value_date]) : td,
+      description: desc,
+      reference: cm.reference !== undefined ? (r[cm.reference] || "").toString().trim() : "",
+      debit: dr,
+      credit: cr,
+      balance: cm.balance !== undefined ? pNum(r[cm.balance]) : null,
+      bank_name: bn,
+      account_no: "",
+      currency: "PKR",
+      dr_cr_indicator: dr && dr > 0 ? "Dr" : cr && cr > 0 ? "Cr" : "",
+      net_amount: (cr || 0) - (dr || 0),
+    };
+
+    // Add extra column values
+    for (const ec of fileExtraCols) {
+      row[ec.key] = r[ec.idx] !== undefined ? (r[ec.idx] || "").toString().trim() : "";
+    }
+
+    // Also map cheque_no separately if reference used something else
+    if (cm.cheque_no !== undefined && cm.reference !== cm.cheque_no) {
+      row._cheque_no = (r[cm.cheque_no] || "").toString().trim();
+    }
+
+    // Map classification hint columns
+    if (cm._ref_tag !== undefined) {
+      row._ref_tag = (r[cm._ref_tag] || "").toString().trim();
+    }
+    if (cm._src_type !== undefined) {
+      row._src_type = (r[cm._src_type] || "").toString().trim();
+    }
+    if (cm._src_code !== undefined) {
+      row._src_code = r[cm._src_code];
+    }
+
+    out.push(row);
+  }
+
+  return {
+    bankCode: bc,
+    bankName: bn,
+    data: out,
+    totalRows: out.length,
+    fileName: fn,
+    extraCols: fileExtraCols,
+  };
+}
+
+// ═══════════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════════
+const dz=document.getElementById("dropzone");
+dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("drag-over");});
+dz.addEventListener("dragleave",()=>dz.classList.remove("drag-over"));
+dz.addEventListener("drop",e=>{e.preventDefault();dz.classList.remove("drag-over");handleFileSelect(e.dataTransfer.files);});
+function handleFileSelect(files){if(!files.length)return;document.getElementById("loadingBar").style.display="block";document.getElementById("dropzoneTitle").textContent="Processing...";let pend=files.length;const res=[];Array.from(files).forEach(f=>{const rd=new FileReader();rd.onload=e=>{try{const ab=new Uint8Array(e.target.result);
+  // Read with cellDates:false to get raw values (serial numbers for dates)
+  // Then use raw:true to also get formatted strings
+  const wb=XLSX.read(ab,{type:"array",cellDates:false,raw:false});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const d=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false});
+  res.push(processFile(d,f.name));
+}catch(er){res.push({fileName:f.name,error:er.message,data:[],bankCode:"UNKNOWN",bankName:"Error",totalRows:0});}pend--;if(!pend){document.getElementById("loadingBar").style.display="none";document.getElementById("dropzoneTitle").textContent="Drop bank statement(s) here";onLoaded(res);}};rd.readAsArrayBuffer(f);});}
+function onLoaded(r){
+  S.files=S.files.concat(r);
+  // Register any new extra columns detected from files
+  for (const file of r) {
+    if (file.extraCols && file.extraCols.length) {
+      for (const ec of file.extraCols) {
+        // Only add if not already present
+        if (!S.cols.find(c => c.key === ec.key)) {
+          S.cols.push({ key: ec.key, label: ec.label, type: "auto", active: true });
+        }
+      }
+    }
+  }
+  rebuild();
+  render();
+}
+function removeFile(i){S.files.splice(i,1);rebuild();render();}
+function rebuild(){const all=S.files.flatMap(r=>r.data||[]);all.forEach((r,i)=>r.sr_no=i+1);S.merged=all;S.page=1;recomputeCustom();doFilter();}
+
+// ═══════════════════════════════════════════
+// SMART PROMPT ENGINE (fully offline)
+// ═══════════════════════════════════════════
+function buildSmartFn(prompt) {
+  const p = prompt.toLowerCase().trim();
+
+  // ── Pattern 1: "label/name/assign debit as X and credit as Y" ──
+  const labelMatch = p.match(/(?:label|name|assign|set|mark|map)\s+(?:each\s+)?(?:(?:all\s+)?debit\s*(?:value|amount|entries?|transaction)?s?\s*(?:should\s+be\s+)?(?:named\s+)?(?:as\s+)?[""']?(.+?)[""']?\s+and\s+(?:each\s+)?(?:all\s+)?credit\s*(?:value|amount|entries?|transaction)?s?\s*(?:should\s+be\s+)?(?:named\s+)?(?:as\s+)?[""']?(.+?)[""']?$)/i)
+    || p.match(/debit\s*(?:value|amount|entries?)?s?\s*(?:should\s+be\s+)?(?:named|labeled|called|set|assigned)\s*(?:as\s+)?[""']?(.+?)[""']?\s*(?:and|,)\s*(?:each\s+)?credit\s*(?:value|amount|entries?)?s?\s*(?:should\s+be\s+)?(?:named|labeled|called|set|assigned)\s*(?:as\s+)?[""']?(.+?)[""']?$/i);
+  if (labelMatch) {
+    const drLabel = labelMatch[1].trim(), crLabel = labelMatch[2].trim();
+    return row => {
+      if (row.debit && row.debit > 0) return drLabel;
+      if (row.credit && row.credit > 0) return crLabel;
+      return "";
+    };
+  }
+
+  // Also match reverse: credit as X and debit as Y
+  const labelMatch2 = p.match(/credit\s*(?:value|amount|entries?)?s?\s*(?:should\s+be\s+)?(?:named|labeled|called|set|assigned)\s*(?:as\s+)?[""']?(.+?)[""']?\s*(?:and|,)\s*(?:each\s+)?debit\s*(?:value|amount|entries?)?s?\s*(?:should\s+be\s+)?(?:named|labeled|called|set|assigned)\s*(?:as\s+)?[""']?(.+?)[""']?$/i);
+  if (labelMatch2) {
+    const crLabel = labelMatch2[1].trim(), drLabel = labelMatch2[2].trim();
+    return row => {
+      if (row.debit && row.debit > 0) return drLabel;
+      if (row.credit && row.credit > 0) return crLabel;
+      return "";
+    };
+  }
+
+  // ── Pattern 2: "categorize/classify as X, Y, Z" ──
+  if (/categori|classif|group|label.*(?:as|into|:)/i.test(p)) {
+    const cats = {
+      salary: /salary|payroll|wage|income|stipend/i,
+      utility: /utility|bill|iesco|lesco|sngpl|sui.*gas|wapda|ptcl|electric|gas\s/i,
+      shopping: /pos|purchase|shop|mart|store|carrefour|metro|khaadi|jalal|fatah|imtiaz|hyperstar|miniso/i,
+      transfer: /ibft|nift|raast|transfer|remit|swift/i,
+      cash: /atm|withdraw|cash\s*dep|cdm|cash/i,
+      food: /food|panda|restaurant|cafe|eat|chaye|dhaba|pizza|kfc|mcdonald/i,
+      fuel: /fuel|petrol|parco|pso|shell|total|caltex/i,
+      education: /university|fee|school|college|tuition|education/i,
+      mobile: /mobile|top.?up|jazz|zong|telenor|ufone|mobilink/i,
+      investment: /dividend|invest|mutual|fund|psx|stock|securit/i,
+      loan: /loan|installment|emi|repay|mortgage/i,
+      online: /online|daraz|amazon|ebay|paypal|easypaisa|jazzcash/i,
+    };
+    return row => {
+      const d = (row.description || "").toLowerCase();
+      for (const [cat, rx] of Object.entries(cats)) {
+        if (rx.test(d)) return cat.charAt(0).toUpperCase() + cat.slice(1);
+      }
+      return "Other";
+    };
+  }
+
+  // ── Pattern 3: "flag/mark transactions above/below/over X" ──
+  const flagMatch = p.match(/(?:flag|mark|highlight|tag|label)\s+.*?(?:above|over|greater|more|exceed|>\s*|>=\s*)(?:pkr\s*)?(\d[\d,]*)/i);
+  if (flagMatch) {
+    const threshold = parseFloat(flagMatch[1].replace(/,/g, ""));
+    const labelHigh = p.match(/as\s+[""']?(.+?)[""']?\s*$/i)?.[1] || "High Value";
+    return row => {
+      const amt = Math.max(row.debit || 0, row.credit || 0);
+      return amt > threshold ? labelHigh : "Normal";
+    };
+  }
+  const flagBelow = p.match(/(?:flag|mark|highlight|tag|label)\s+.*?(?:below|under|less|<\s*|<=\s*)(?:pkr\s*)?(\d[\d,]*)/i);
+  if (flagBelow) {
+    const threshold = parseFloat(flagBelow[1].replace(/,/g, ""));
+    const label = p.match(/as\s+[""']?(.+?)[""']?\s*$/i)?.[1] || "Low Value";
+    return row => {
+      const amt = Math.max(row.debit || 0, row.credit || 0);
+      return amt < threshold ? label : "Normal";
+    };
+  }
+
+  // ── Pattern 4: "incoming/outgoing" or "inflow/outflow" or "type" ──
+  if (/(?:incoming|outgoing|inflow|outflow|direction|transaction\s*type|show\s.*type|in\s*or\s*out)/i.test(p)) {
+    return row => {
+      if (row.credit && row.credit > 0) return "Incoming";
+      if (row.debit && row.debit > 0) return "Outgoing";
+      return "";
+    };
+  }
+
+  // ── Pattern 4b: "payment/receipt type" or "classify as payment receipt" ──
+  if (/(?:payment|receipt)\s*(?:type|classification|category)|classify\s*(?:as\s+)?(?:payment|receipt)|payment.*receipt.*misc/i.test(p)) {
+    return row => classifyType(row);
+  }
+
+  // ── Pattern 4c: "code" or "transaction code" or "type code" ──
+  if (/(?:transaction\s*)?code|type\s*code|payment\s*code|receipt\s*code|generate\s*code/i.test(p)) {
+    return row => classifyCode(row);
+  }
+
+  // ── Pattern 5: "calculate X% on debit/credit" ──
+  const pctMatch = p.match(/(?:calculate|compute|add|apply|show)\s+(\d+(?:\.\d+)?)\s*%\s*(?:gst|tax|vat|markup|on|of)\s*(?:on\s+)?(?:the\s+)?(debit|credit|amount|balance)?/i);
+  if (pctMatch) {
+    const pct = parseFloat(pctMatch[1]) / 100;
+    const field = (pctMatch[2] || "debit").toLowerCase();
+    return row => {
+      let base = 0;
+      if (field.includes("credit")) base = row.credit || 0;
+      else if (field.includes("balance")) base = Math.abs(row.balance || 0);
+      else base = row.debit || 0;
+      return base > 0 ? Math.round(base * pct * 100) / 100 : null;
+    };
+  }
+
+  // ── Pattern 6: "extract month/day/year from date" ──
+  if (/month\s*name|extract\s*month|show\s*month/i.test(p)) {
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    return row => {
+      if (!row.trans_date) return "";
+      const parts = row.trans_date.split("-");
+      if (parts.length >= 2) return months[parseInt(parts[1]) - 1] || "";
+      return "";
+    };
+  }
+  if (/day\s*(?:of\s*week|name)|extract\s*day|weekday/i.test(p)) {
+    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    return row => {
+      if (!row.trans_date) return "";
+      const parts = row.trans_date.split("-");
+      if (parts.length === 3) { const d = new Date(parts[2], parts[1]-1, parts[0]); return days[d.getDay()] || ""; }
+      return "";
+    };
+  }
+  if (/extract\s*year|show\s*year/i.test(p)) {
+    return row => {
+      if (!row.trans_date) return "";
+      const parts = row.trans_date.split("-");
+      return parts.length === 3 ? parts[2] : "";
+    };
+  }
+
+  // ── Pattern 7: "mark ATM/POS/specific keyword as X" ──
+  const markMatch = p.match(/(?:mark|label|tag|flag)\s+(.+?)\s+(?:transactions?\s+)?(?:as|to|=)\s+[""']?(.+?)[""']?\s*$/i);
+  if (markMatch) {
+    const keyword = markMatch[1].trim().toLowerCase().replace(/\s+transactions?$/i, "");
+    const label = markMatch[2].trim();
+    return row => {
+      return (row.description || "").toLowerCase().includes(keyword) ? label : "";
+    };
+  }
+
+  // ── Pattern 8: "amount range / bucket / bracket" ──
+  if (/range|bucket|bracket|tier|band|slab/i.test(p)) {
+    return row => {
+      const amt = Math.max(row.debit || 0, row.credit || 0);
+      if (amt === 0) return "Zero";
+      if (amt < 1000) return "< 1K";
+      if (amt < 10000) return "1K - 10K";
+      if (amt < 50000) return "10K - 50K";
+      if (amt < 100000) return "50K - 100K";
+      if (amt < 500000) return "100K - 500K";
+      return "500K+";
+    };
+  }
+
+  // ── Pattern 9: "unique ID / serial / row number" ──
+  if (/unique\s*id|serial|row\s*(?:num|#|id)|sequence/i.test(p)) {
+    let counter = 1;
+    return row => "TXN-" + String(counter++).padStart(5, "0");
+  }
+
+  // ── Pattern 10: "running total / cumulative" ──
+  if (/running\s*total|cumulative|progressive/i.test(p)) {
+    let running = 0;
+    return row => {
+      running += (row.credit || 0) - (row.debit || 0);
+      return Math.round(running * 100) / 100;
+    };
+  }
+
+  // ── Pattern 11: Extract account number ──
+  if (/extract\s*(?:the\s+)?(?:account|a\/c|acct)\s*(?:no|num|number|#)?|(?:account|a\/c|acct)\s*(?:no|num|number|#)\s*(?:from|in)/i.test(p)) {
+    return row => {
+      const d = (row.description || "") + " " + (row.reference || "");
+      // ACCT: or ACCT or A/C followed by digits (with optional colon/space)
+      let m = d.match(/(?:ACCT?|A\/C|ACCOUNT)\s*[:\s#]*\s*(\d[\d\-]{4,})/i);
+      if (m) return m[1];
+      // IBFT TO A/C pattern
+      m = d.match(/(?:TO|FROM)\s+(?:A\/C|ACCT?|ACCOUNT)\s*[:\s#]*\s*(\d[\d\-]{4,})/i);
+      if (m) return m[1];
+      // Long digit sequence (8+ digits, likely account)
+      m = d.match(/(\d{8,25})/);
+      if (m) return m[1];
+      // Hyphenated account format
+      m = d.match(/(\d{2,4}[\-]\d{4,}[\-]?\d*)/);
+      if (m) return m[1];
+      return "";
+    };
+  }
+
+  // ── Pattern 11b: Extract document number ──
+  if (/extract\s*(?:the\s+)?(?:doc|document|voucher)\s*(?:no|num|number|#)?|(?:doc|document|voucher)\s*(?:no|num|number|#)\s*(?:from|in)/i.test(p)) {
+    return row => {
+      const d = (row.description || "") + " " + (row.reference || "");
+      const m = d.match(/(?:Doc|Document|Voucher)\s*(?:No\.?\s*)?[:\s#]*\s*(\d+)/i);
+      return m ? m[1] : "";
+    };
+  }
+
+  // ── Pattern 11c: Extract branch code ──
+  if (/extract\s*(?:the\s+)?(?:branch|br)\s*(?:code|no|num|number|#|id)?|(?:branch|br)\s*(?:code|no|num|number)?\s*(?:from|in)/i.test(p)) {
+    return row => {
+      const d = (row.description || "") + " " + (row.reference || "");
+      const m = d.match(/(?:Br|Branch)\s*[:\s#]*\s*(\d+)/i);
+      return m ? m[1] : "";
+    };
+  }
+
+  // ── Pattern 11d: Extract contra / transaction type keyword ──
+  if (/extract\s*(?:the\s+)?(?:transaction|txn|trans)\s*(?:type|code|keyword)|(?:transaction|txn)\s*(?:type|code)\s*(?:from|in)/i.test(p)) {
+    return row => {
+      const d = (row.description || "");
+      // Get the first word or keyword before any numbers/separators
+      const m = d.match(/^([A-Z][A-Z\s]{1,20}?)(?:\s*[:\d\/])/i);
+      return m ? m[1].trim() : d.split(/\s+/).slice(0, 2).join(" ");
+    };
+  }
+
+  // ── Pattern 12: Extract phone / mobile number ──
+  if (/extract\s*(?:the\s+)?(?:phone|mobile|cell|contact)\s*(?:no|num|number|#)?|(?:phone|mobile|cell)\s*(?:no|num|number)?\s*(?:from|in)/i.test(p)) {
+    return row => {
+      const d = (row.description || "") + " " + (row.reference || "");
+      const m = d.match(/((?:\+92|0)\d{9,10})/);
+      return m ? m[1] : "";
+    };
+  }
+
+  // ── Pattern 13: Extract cheque / instrument number ──
+  if (/extract\s*(?:the\s+)?(?:cheque|check|chq|instrument)\s*(?:no|num|number|#)?|(?:cheque|check|chq|instrument)\s*(?:no|num|number)?\s*(?:from|in)/i.test(p)) {
+    return row => {
+      const d = (row.description || "") + " " + (row.reference || "");
+      let m = d.match(/(?:CHQ|CHEQUE|CHECK|CHK|INSTRUMENT)\s*(?:NO\.?\s*)?[:#]?\s*(\d+)/i);
+      if (m) return m[1];
+      m = d.match(/(\d{5,8})/);
+      return m ? m[1] : "";
+    };
+  }
+
+  // ── Pattern 14: Extract IBAN ──
+  if (/extract\s*(?:the\s+)?iban|iban\s*(?:from|in)/i.test(p)) {
+    return row => {
+      const d = (row.description || "") + " " + (row.reference || "");
+      const m = d.match(/([A-Z]{2}\d{2}[A-Z0-9]{11,30})/i);
+      return m ? m[1].toUpperCase() : "";
+    };
+  }
+
+  // ── Pattern 15: Extract beneficiary / payee / name ──
+  if (/extract\s*(?:the\s+)?(?:beneficiary|payee|receiver|recipient|sender|name|party)|(?:beneficiary|payee|receiver|recipient|sender|party)\s*(?:name)?\s*(?:from|in)|(?:get|show|find)\s*(?:the\s+)?(?:beneficiary|payee|name|party)/i.test(p)) {
+    return row => {
+      const d = row.description || "";
+      // Try common patterns: "TO name", "FROM name", "- name", "TRANSFER name"
+      let m = d.match(/(?:TO|FROM|BENEFICIARY|PAYEE|RECEIVER)\s*[:\-]?\s*([A-Z][A-Z\s\.]{2,30}?)(?:\s*[-\/\d]|$)/i);
+      if (m) return m[1].trim();
+      // After last dash
+      const parts = d.split(/\s*[-–]\s*/);
+      if (parts.length >= 2) {
+        const last = parts[parts.length - 1].trim();
+        if (last.length > 2 && !/^\d+$/.test(last)) return last;
+      }
+      return "";
+    };
+  }
+
+  // ── Pattern 16: Get text after / before dash or separator ──
+  if (/(?:text|part|info|detail|portion)\s*(?:after|following)\s*(?:the\s+)?(?:dash|hyphen|[-–]|separator|slash|\/)/i.test(p) ||
+      /after\s*(?:the\s+)?(?:dash|hyphen|[-–]|last\s+[-–])/i.test(p) ||
+      /(?:get|show|extract)\s*(?:the\s+)?(?:text|part|info)?\s*after\s*(?:the\s+)?(?:dash|[-–]|hyphen)/i.test(p)) {
+    return row => {
+      const d = row.description || "";
+      const parts = d.split(/\s*[-–]\s*/);
+      return parts.length >= 2 ? parts.slice(1).join(" - ").trim() : "";
+    };
+  }
+  if (/(?:text|part|info|detail|portion)\s*(?:before)\s*(?:the\s+)?(?:dash|hyphen|[-–]|separator|slash|\/)/i.test(p) ||
+      /before\s*(?:the\s+)?(?:dash|hyphen|[-–]|first\s+[-–])/i.test(p) ||
+      /(?:get|show|extract)\s*(?:the\s+)?(?:text|part|info)?\s*before\s*(?:the\s+)?(?:dash|[-–]|hyphen)/i.test(p)) {
+    return row => {
+      const d = row.description || "";
+      const parts = d.split(/\s*[-–]\s*/);
+      return parts[0].trim();
+    };
+  }
+
+  // ── Pattern 17: Extract first/last N words ──
+  const wordsMatch = p.match(/(?:first|last|initial|final)\s+(\d+)\s+words?\s*(?:from|of|in)?\s*(?:the\s+)?(?:description|narration|desc|reference|ref)?/i);
+  if (wordsMatch) {
+    const n = parseInt(wordsMatch[1]);
+    const isLast = /last|final/i.test(p);
+    const fromRef = /ref/i.test(p);
+    return row => {
+      const d = (fromRef ? row.reference : row.description) || "";
+      const words = d.trim().split(/\s+/);
+      return isLast ? words.slice(-n).join(" ") : words.slice(0, n).join(" ");
+    };
+  }
+
+  // ── Pattern 18: Extract all numbers / digits from a field ──
+  if (/extract\s*(?:all\s+)?(?:numbers?|digits?)\s*(?:from|in)\s*(?:the\s+)?(?:description|narration|reference|ref)/i.test(p)) {
+    const fromRef = /ref/i.test(p);
+    return row => {
+      const d = (fromRef ? row.reference : row.description) || "";
+      const nums = d.match(/\d+/g);
+      return nums ? nums.join(", ") : "";
+    };
+  }
+
+  // ── Pattern 19: Extract amount mentioned in description ──
+  if (/extract\s*(?:the\s+)?(?:amount|value|figure|sum)\s*(?:from|in|mentioned)/i.test(p)) {
+    return row => {
+      const d = (row.description || "") + " " + (row.reference || "");
+      const m = d.match(/(?:PKR|RS\.?|AMOUNT)\s*[:\s]*([\d,]+\.?\d*)/i);
+      if (m) return parseFloat(m[1].replace(/,/g, ""));
+      return "";
+    };
+  }
+
+  // ── Pattern 20: Split and get Nth part ──
+  const splitMatch = p.match(/(?:split|separate|divide)\s+(?:the\s+)?(?:description|narration|reference|ref)\s+(?:by|on|at|using)\s+["']?(.+?)["']?\s+(?:and\s+)?(?:get|take|show|extract|use)\s+(?:the\s+)?(?:part\s+)?(\d+|first|second|third|fourth|last)/i);
+  if (splitMatch) {
+    const sep = splitMatch[1].trim();
+    let idx = splitMatch[2];
+    if (idx === "first") idx = 0; else if (idx === "second") idx = 1; else if (idx === "third") idx = 2; else if (idx === "fourth") idx = 3; else if (idx === "last") idx = -1; else idx = parseInt(idx) - 1;
+    const fromRef = /ref/i.test(p);
+    return row => {
+      const d = (fromRef ? row.reference : row.description) || "";
+      const parts = d.split(sep);
+      const i = idx === -1 ? parts.length - 1 : idx;
+      return (parts[i] || "").trim();
+    };
+  }
+
+  // ── Pattern 21: Extract transaction channel / method ──
+  if (/(?:channel|method|mode|medium|source|platform|via)\s*(?:of\s+)?(?:transaction|payment|transfer)?/i.test(p) ||
+      /(?:transaction|payment)\s*(?:channel|method|mode|medium|source|platform)/i.test(p)) {
+    return row => {
+      const d = (row.description || "").toLowerCase();
+      if (/atm/i.test(d)) return "ATM";
+      if (/pos|point\s*of\s*sale/i.test(d)) return "POS";
+      if (/ibft/i.test(d)) return "IBFT";
+      if (/nift/i.test(d)) return "NIFT";
+      if (/raast/i.test(d)) return "Raast";
+      if (/online|internet|web/i.test(d)) return "Online Banking";
+      if (/mobile|app|sms/i.test(d)) return "Mobile Banking";
+      if (/cheque|chq|check/i.test(d)) return "Cheque";
+      if (/standing\s*order|auto|recurring/i.test(d)) return "Standing Order";
+      if (/cash\s*dep|cdm/i.test(d)) return "Cash Deposit";
+      if (/dd\s|demand\s*draft/i.test(d)) return "Demand Draft";
+      if (/swift/i.test(d)) return "SWIFT";
+      if (/salary|payroll/i.test(d)) return "Payroll";
+      if (/profit|markup|return/i.test(d)) return "Bank Credit";
+      return "Other";
+    };
+  }
+
+  // ── Pattern 22: Extract location / branch / city ──
+  if (/extract\s*(?:the\s+)?(?:location|branch|city|place|area)|(?:location|branch|city)\s*(?:from|in)/i.test(p)) {
+    const cities = ["islamabad","rawalpindi","lahore","karachi","peshawar","quetta","faisalabad","multan","hyderabad","sialkot","gujranwala","bahawalpur","abbottabad","mardan","swat","muzaffarabad","gilgit","skardu","sukkur","larkana"];
+    const areas = ["pwd","dha","bahria","gulberg","blue area","f-6","f-7","f-8","f-10","f-11","g-9","g-10","g-11","i-8","i-9","i-10","saddar","clifton","defence","johar","nazimabad","model town","mall road","cantt"];
+    return row => {
+      const d = (row.description || "").toLowerCase();
+      for (const city of cities) if (d.includes(city)) return city.charAt(0).toUpperCase() + city.slice(1);
+      for (const area of areas) if (d.includes(area)) return area.toUpperCase();
+      return "";
+    };
+  }
+
+  // ── Pattern 23: Combine / concatenate fields ──
+  if (/(?:combine|concat|merge|join)\s+(?:the\s+)?/i.test(p)) {
+    // Try to find which fields to combine
+    const fields = [];
+    if (/date/i.test(p)) fields.push("trans_date");
+    if (/desc|narr/i.test(p)) fields.push("description");
+    if (/ref|cheq/i.test(p)) fields.push("reference");
+    if (/bank/i.test(p)) fields.push("bank_name");
+    if (/debit/i.test(p)) fields.push("debit");
+    if (/credit/i.test(p)) fields.push("credit");
+    if (/balance/i.test(p)) fields.push("balance");
+    if (fields.length >= 2) {
+      return row => fields.map(f => row[f] ?? "").filter(v => v !== "" && v !== null).join(" | ");
+    }
+  }
+
+  // ── Pattern 24: Generic "extract X from description/reference" catch-all ──
+  const genericExtract = p.match(/(?:extract|get|pull|find|show|grab)\s+(?:the\s+)?(.+?)\s+(?:from|in|of)\s+(?:the\s+)?(?:description|narration|desc|reference|ref|detail)/i);
+  if (genericExtract) {
+    const what = genericExtract[1].toLowerCase().trim();
+    const fromRef = /ref/i.test(p);
+    const srcField = fromRef ? "reference" : "description";
+
+    // Sub-patterns within generic extract
+    if (/account|a\/c|acct/i.test(what)) {
+      return row => { const d = (row[srcField]||""); const m = d.match(/(?:ACCT?|A\/C|ACCOUNT)\s*[:\s#]*\s*(\d[\d\-]{4,})/i) || d.match(/(\d{8,25})/); return m ? m[1] : ""; };
+    }
+    if (/doc|document|voucher/i.test(what)) {
+      return row => { const m = (row[srcField]||"").match(/(?:Doc|Document|Voucher)\s*(?:No\.?\s*)?[:\s#]*\s*(\d+)/i); return m ? m[1] : ""; };
+    }
+    if (/branch|br\b/i.test(what)) {
+      return row => { const m = (row[srcField]||"").match(/(?:Br|Branch)\s*[:\s#]*\s*(\d+)/i); return m ? m[1] : ""; };
+    }
+    if (/phone|mobile|cell|contact/i.test(what)) {
+      return row => { const m = (row[srcField]||"").match(/((?:\+92|0)\d{9,10})/); return m ? m[1] : ""; };
+    }
+    if (/amount|value|figure/i.test(what)) {
+      return row => { const m = (row[srcField]||"").match(/(?:PKR|RS\.?|AMOUNT)\s*[:\s]*([\d,]+\.?\d*)/i); return m ? parseFloat(m[1].replace(/,/g,"")) : ""; };
+    }
+    if (/number|digit|num/i.test(what)) {
+      return row => { const nums = (row[srcField]||"").match(/\d+/g); return nums ? nums.join(", ") : ""; };
+    }
+    if (/name|beneficiary|payee|party/i.test(what)) {
+      return row => { const d = row[srcField]||""; const m = d.match(/(?:TO|FROM|BENEFICIARY|PAYEE)\s*[:\-]?\s*([A-Z][A-Z\s\.]{2,30}?)(?:\s*[-\/\d]|$)/i); if(m) return m[1].trim(); const parts=d.split(/\s*[-–]\s*/); return parts.length>=2?parts[parts.length-1].trim():""; };
+    }
+    // Last resort: try to find any quoted or emphasized text
+    return row => {
+      const d = row[srcField] || "";
+      const parts = d.split(/\s*[-–\/]\s*/);
+      return parts.length >= 2 ? parts[parts.length - 1].trim() : d.split(" ").slice(0, 4).join(" ");
+    };
+  }
+
+  // ── Fallback: if nothing matches ──
+  return null;
+}
+
+// ═══════════════════════════════════════════
+// CUSTOM COLUMNS
+// ═══════════════════════════════════════════
+function openModal(){document.getElementById("modalOverlay").style.display="flex";switchTab("formula");}
+function closeModal(){document.getElementById("modalOverlay").style.display="none";const st=document.getElementById("smartStatus");if(st)st.style.display="none";}
+function switchTab(t){document.getElementById("formulaPane").style.display=t==="formula"?"block":"none";document.getElementById("smartPane").style.display=t==="smart"?"block":"none";document.getElementById("tabFormula").classList.toggle("active",t==="formula");document.getElementById("tabSmart").classList.toggle("active",t==="smart");}
+
+function evalExpr(expr,row){return new Function("sr_no","trans_date","value_date","description","reference","debit","credit","balance","bank_name","account_no","currency","dr_cr_indicator","net_amount","return("+expr+");")(row.sr_no,row.trans_date,row.value_date,row.description,row.reference,row.debit,row.credit,row.balance,row.bank_name,row.account_no,row.currency,row.dr_cr_indicator,row.net_amount);}
+
+function addFormulaCol(){
+  const name=document.getElementById("fColName").value.trim(),expr=document.getElementById("fExpression").value.trim();
+  if(!name||!expr)return alert("Please fill in both fields.");
+  const key="c_"+(++cid);
+  try{if(S.merged.length)evalExpr(expr,S.merged[0]);}catch(e){return alert("Formula error: "+e.message);}
+  S.customDefs.push({key,label:name,type:"formula",expr});
+  S.cols.push({key,label:name,type:"formula",active:true});
+  recomputeCustom();doFilter();closeModal();
+  document.getElementById("fColName").value="";document.getElementById("fExpression").value="";render();
+}
+
+function addSmartCol(){
+  const name=document.getElementById("sColName").value.trim(),prompt=document.getElementById("sPrompt").value.trim();
+  if(!name||!prompt)return alert("Please fill in both fields.");
+  const stEl=document.getElementById("smartStatus");
+  const fn=buildSmartFn(prompt);
+  if(!fn){
+    stEl.style.display="block";stEl.className="smart-status error";
+    stEl.textContent="Could not understand this prompt. Try rephrasing, or use the Formula tab for custom expressions.";
+    return;
+  }
+  const key="c_"+(++cid);
+  try{
+    for(const row of S.merged){try{row[key]=fn(row);}catch(e){row[key]="ERR";}}
+    S.customDefs.push({key,label:name,type:"smart",fn,prompt});
+    S.cols.push({key,label:name,type:"smart",active:true});
+    stEl.style.display="block";stEl.className="smart-status success";stEl.textContent="✓ Column created successfully!";
+    doFilter();setTimeout(()=>{closeModal();render();},500);
+  }catch(e){
+    stEl.style.display="block";stEl.className="smart-status error";stEl.textContent="Error: "+e.message;
+  }
+}
+
+function recomputeCustom(){
+  for(const d of S.customDefs){
+    if(d.type==="formula"){for(const r of S.merged){try{r[d.key]=evalExpr(d.expr,r);}catch(e){r[d.key]="ERR";}}}
+    else if(d.type==="smart"&&d.fn){for(const r of S.merged){try{r[d.key]=d.fn(r);}catch(e){r[d.key]="ERR";}}}
+  }
+}
+
+function removeCustomCol(key){S.customDefs=S.customDefs.filter(c=>c.key!==key);S.cols=S.cols.filter(c=>c.key!==key);for(const r of S.merged)delete r[key];doFilter();render();}
+
+// ═══════════════════════════════════════════
+// TYPE COLUMN — Payment/Receipt/Misc
+// ═══════════════════════════════════════════
+function getBankKey(bankName) {
+  const b = (bankName || "").toLowerCase();
+  if (/habib\s*bank|\bhbl\b/i.test(b)) return "HBL";
+  if (/united\s*bank|\bubl\b/i.test(b)) return "UBL";
+  if (/mcb\s*bank|\bmcb\b|muslim\s*commercial/i.test(b)) return "MCB";
+  if (/standard\s*chartered|\bscb\b/i.test(b)) return "SCB";
+  if (/allied\s*bank|\babl\b/i.test(b)) return "ABL";
+  if (/meezan|\bmebl\b/i.test(b)) return "MEEZAN";
+  if (/alfalah|\bbafl\b/i.test(b)) return "BAFL";
+  if (/faysal|\bfbl\b/i.test(b)) return "FAYSAL";
+  if (/js\s*bank|\bjsbl\b/i.test(b)) return "JSBL";
+  if (/askari|\bakbl\b/i.test(b)) return "ASKARI";
+  if (/citi/i.test(b)) return "CITI";
+  if (/\bcba\b/i.test(b)) return "CBA";
+  return "OTHER";
+}
+
+function classifyType(row) {
+  const desc = (row.description || "");
+  const descL = desc.toLowerCase();
+  const combined = descL + " " + (row.reference || "").toLowerCase();
+  const bank = getBankKey(row.bank_name);
+  const isDr = row.debit && row.debit > 0;
+  const isCr = row.credit && row.credit > 0;
+  const refTag = (row._ref_tag || "").toLowerCase();
+
+  // If source file already has Code/Type, use it directly
+  if (row._src_code !== undefined && row._src_code !== null && row._src_code !== "") {
+    const sc = Number(row._src_code);
+    if (sc === 100) return "Payment";
+    if (sc === 200) return "Receipt";
+    if (sc === 300) return "Misc Payment";
+    if (sc === 400) return "Misc Receipt";
+    if (sc === 500) return "Misc Receipt";
+    if (sc === 650) return "Misc Payment";
+    if (sc === 700) return "Misc Payment";
+    if (sc === 800) return isDr ? "Misc Payment" : "Misc Receipt";
+    if (sc === 900) return "Misc Payment";
+  }
+
+  // If source file has Type column, use it
+  if (row._src_type) {
+    const st = row._src_type.toLowerCase();
+    if (st === "payment") return "Payment";
+    if (st === "receipt") return "Receipt";
+    if (/misc\s*payment/i.test(st)) return "Misc Payment";
+    if (/misc\s*receipt/i.test(st)) return "Misc Receipt";
+  }
+
+  // Reversal tag override: if Ref# says "Reversal", use debit=Payment, credit=Receipt
+  if (/reversal/i.test(refTag)) {
+    if (isDr) return "Payment";
+    if (isCr) return "Receipt";
+  }
+
+  // ══ CREDIT ══ (check first — credits should never be misclassified as payments)
+  if (isCr) {
+    // HBL: "Funds Transfer" credits have NO code — return empty
+    if (bank === "HBL" && /^funds\s*transfer/i.test(descL)) return "";
+    // HBL: "Collection Reversa" credits have NO code
+    if (bank === "HBL" && /^collection\s*reversa/i.test(descL)) return "";
+
+    // Always Receipt (200):
+    if (/^credit\s/i.test(descL)) return "Receipt";
+    if (/merchant\s*payment/i.test(descL)) return "Receipt";
+    if (/online\s*transfer\s*merchant/i.test(descL)) return "Receipt";
+    if (/^local\s*transfer/i.test(descL)) return "Receipt";
+    if (/^clg\s*chq|clearing\s*cheque/i.test(descL)) return "Receipt";
+    if (/^raast/i.test(descL)) return "Receipt";
+    if (/^ibft\s/i.test(descL)) return "Receipt";
+    if (/^ibanking\s*trf/i.test(descL)) return "Receipt";
+    if (/^cash\s*deposit/i.test(descL)) return "Receipt";
+
+    // Misc Receipt (400/500):
+    if (/profit|mark[\-\s]*up|interest\s*earned|return\s*on/i.test(combined)) return "Misc Receipt";
+    if (/sweep\s*from/i.test(descL)) return "Misc Receipt";
+    if (/rtgs\s*inflow|rtgs.*from\s*clearing|rtgs.*received/i.test(descL)) return "Misc Receipt";
+    if (/tran\s*banking\s*collection/i.test(descL)) return "Misc Receipt";
+    if (/0525\/cmt\s*xfr/i.test(descL)) return "Misc Receipt";
+    if (/ewp\s*funds\s*trf\s*in/i.test(descL)) return "Misc Receipt";
+    if (/contra\s*acct/i.test(descL)) return "Misc Receipt";
+    if (bank === "CBA" && /telenor\s*corporate/i.test(combined)) return "Misc Receipt";
+
+    return "Receipt";
+  }
+
+  // ══ DEBIT ══
+  if (isDr) {
+    // ── Payment (100) patterns — check BEFORE misc to avoid false misc classification ──
+    if (/online\s*transfer\s*income\s*tax/i.test(descL)) return "Payment";
+    if (/online\s*transfer\s+\d{6}#{2,}/i.test(descL)) return "Payment";
+    if (/^debit\s*txn\s*id/i.test(descL)) return "Payment";
+    if (/^cheque\s*no:/i.test(descL)) return "Payment";
+    if (/^spk\d/i.test(descL)) return "Payment";
+    if (/contract\s*bill/i.test(descL)) return "Payment";
+    if (/shipping\s*guarantee/i.test(descL)) return "Payment";
+    if (/import\s*registered/i.test(descL)) return "Payment";
+    if (/bank\s*guarantees/i.test(descL)) return "Payment";
+    if (/^ak-\d/i.test(descL)) return "Payment";
+
+    // ── WHT (900) ──
+    if (/^debit\s*wht/i.test(descL)) return "Misc Payment";
+    if (/\bwht\b/i.test(descL) && !/clearing/i.test(descL)) return "Misc Payment";
+    if (/withholding[\s\-]*tax/i.test(descL)) return "Misc Payment";
+    if (/with[\s\-]*holding\s*tax/i.test(descL)) return "Misc Payment";
+    if (/tax\s*deducted\s*from/i.test(descL)) return "Misc Payment";
+    if (/1%\s*wht/i.test(descL)) return "Misc Payment";
+
+    // ── FED (650) ──
+    if (/federal\s*excise/i.test(descL)) return "Misc Payment";
+    if (/^fed[\s\/]|fed\/pst|pst\s*on\s*bank|^fed\s+612|fed\s*on\s*pmt/i.test(descL)) return "Misc Payment";
+
+    // ── Bank Charges (700) ──
+    if (/^fee\s*fund\s*transfer|ibft\s*charge/i.test(descL)) return "Misc Payment";
+    if (/stamp\s*charge|po\s*cancellation|cheque\s*return\s*charge|special\s*clearing.*charge|^bill\s*no:/i.test(descL)) return "Misc Payment";
+    if (/charge\s*on\s*ott|3rd\s*bank\s*charge/i.test(descL)) return "Misc Payment";
+    if (/si\s*charge|service\s*charge|bank\s*charge|bank\s*chrg/i.test(descL)) return "Misc Payment";
+    if (/transfer\s*debit.*(?:charge|si\s*charge|ho\s*advice.*charge)/i.test(descL)) return "Misc Payment";
+    if (/vendor\s*charge|pcm\s*pmt\s*ch|cmd\s*pmt\s*ch/i.test(descL)) return "Misc Payment";
+    if (/dishonor/i.test(descL)) return "Misc Payment";
+
+    // ── Misc Transfers (300) ──
+    if (/^local\s*transfer/i.test(descL)) return "Misc Payment";
+    if (/ibft\s*clearing|unt\s+ibft/i.test(descL)) return "Misc Payment";
+    if (/rtgs\s*outflow|rtgs\s*outward/i.test(descL)) return "Misc Payment";
+    if (/^sweep\s*to/i.test(descL)) return "Misc Payment";
+    if (/rtgs\s*payment/i.test(descL)) return "Misc Payment";
+    if (/^online\s*transfer\s+\d{7,}\s/i.test(descL) && /ibft/i.test(descL)) return "Misc Payment";
+    if (/tran\s*banking\s*collection/i.test(descL)) return "Misc Payment";
+    if (/0525\/cmt\s*xfr/i.test(descL)) return "Misc Payment";
+    if (bank === "MCB" && /contra\s*acct/i.test(descL)) return "Misc Payment";
+    if (bank === "CBA" && /telenor\s*corporate/i.test(combined)) return "Misc Payment";
+    if (bank === "CBA" && /rtgs\s*outward/i.test(descL)) return "Misc Payment";
+
+    return "Payment";
+  }
+  return "";
+}
+
+function classifyCode(row) {
+  // If source file already has Code, use it
+  if (row._src_code !== undefined && row._src_code !== null && row._src_code !== "") {
+    const sc = Number(row._src_code);
+    if (!isNaN(sc) && sc > 0) return sc;
+  }
+
+  const type = classifyType(row);
+  const desc = (row.description || "");
+  const descL = desc.toLowerCase();
+  const combined = descL + " " + (row.reference || "").toLowerCase();
+  const bank = getBankKey(row.bank_name);
+
+  if (type === "Payment") return 100;
+  if (type === "Receipt") return 200;
+
+  if (type === "Misc Receipt") {
+    if (bank === "CBA" && /telenor\s*corporate/i.test(combined)) return 800;
+    if (/profit|mark[\-\s]*up|interest\s*earned/i.test(combined)) return 500;
+    return 400;
+  }
+
+  if (type === "Misc Payment") {
+    if (bank === "CBA" && /telenor\s*corporate/i.test(combined)) return 800;
+    // WHT: HBL uses 650, others use 900
+    if (/^debit\s*wht/i.test(descL)) return bank === "HBL" ? 650 : 900;
+    if (/\bwht\b/i.test(descL) && !/clearing/i.test(descL)) return bank === "HBL" ? 650 : 900;
+    if (/withholding[\s\-]*tax|with[\s\-]*holding\s*tax|tax\s*deducted|1%\s*wht/i.test(descL)) return bank === "HBL" ? 650 : 900;
+    // 650: FED
+    if (/federal\s*excise|^fed[\s\/]|fed\/pst|pst\s*on\s*bank|^fed\s+612|fed\s*on\s*pmt/i.test(descL)) return 650;
+    // 700: Bank Charges
+    if (/^fee\s*fund|ibft\s*charge/i.test(descL)) return 700;
+    if (/stamp\s*charge|po\s*cancellation|cheque\s*return\s*charge|special\s*clearing.*charge|^bill\s*no:/i.test(descL)) return 700;
+    if (/charge\s*on\s*ott|3rd\s*bank\s*charge|si\s*charge|service\s*charge|bank\s*charge|bank\s*chrg/i.test(descL)) return 700;
+    if (/transfer\s*debit.*(?:charge|si\s*charge|ho\s*advice.*charge)/i.test(descL)) return 700;
+    if (/vendor\s*charge|pcm\s*pmt\s*ch|cmd\s*pmt\s*ch|dishonor/i.test(descL)) return 700;
+    // 300: everything else
+    return 300;
+  }
+  return "";
+}
+
+function generateTypeColumn() {
+  const typeExists = S.cols.find(c => c.key === "_type_col");
+  const codeExists = S.cols.find(c => c.key === "_code_col");
+
+  if (typeExists || codeExists) {
+    alert("Type/Code columns already exist. Remove them first if you want to regenerate.");
+    return;
+  }
+
+  // Generate Type column
+  const typeKey = "_type_col";
+  for (const row of S.merged) {
+    row[typeKey] = classifyType(row);
+  }
+  S.customDefs.push({ key: typeKey, label: "Type", type: "smart", fn: classifyType, prompt: "type-column" });
+
+  // Generate Code column
+  const codeKey = "_code_col";
+  for (const row of S.merged) {
+    row[codeKey] = classifyCode(row);
+  }
+  S.customDefs.push({ key: codeKey, label: "Code", type: "smart", fn: classifyCode, prompt: "code-column" });
+
+  // Insert both right after dr_cr_indicator
+  const drcrIdx = S.cols.findIndex(c => c.key === "dr_cr_indicator");
+  const typeCol = { key: typeKey, label: "Type", type: "smart", active: true };
+  const codeCol = { key: codeKey, label: "Code", type: "smart", active: true };
+
+  if (drcrIdx >= 0) {
+    S.cols.splice(drcrIdx + 1, 0, typeCol, codeCol);
+  } else {
+    S.cols.push(typeCol, codeCol);
+  }
+
+  doFilter();
+  render();
+}
+
+// ═══════════════════════════════════════════
+// COLUMN ORDERING — Drag & Drop + Arrows
+// ═══════════════════════════════════════════
+let dragSrcIdx = null;
+function moveCol(key,dir){const i=S.cols.findIndex(c=>c.key===key);if(i<0)return;const ni=i+dir;if(ni<0||ni>=S.cols.length)return;[S.cols[i],S.cols[ni]]=[S.cols[ni],S.cols[i]];renderColToggles();renderTable();}
+function toggleCol(key){const c=S.cols.find(x=>x.key===key);if(c)c.active=!c.active;renderColToggles();renderTable();renderPagination();updateBadge();}
+
+function onColDragStart(e,idx){dragSrcIdx=idx;e.dataTransfer.effectAllowed="move";e.target.classList.add("dragging");}
+function onColDragOver(e,idx){e.preventDefault();e.dataTransfer.dropEffect="move";document.querySelectorAll(".col-chip").forEach(c=>c.classList.remove("drag-target"));e.target.closest(".col-chip")?.classList.add("drag-target");}
+function onColDrop(e,idx){e.preventDefault();document.querySelectorAll(".col-chip").forEach(c=>{c.classList.remove("drag-target");c.classList.remove("dragging");});if(dragSrcIdx!==null&&dragSrcIdx!==idx){const item=S.cols.splice(dragSrcIdx,1)[0];S.cols.splice(idx,0,item);renderColToggles();renderTable();}dragSrcIdx=null;}
+function onColDragEnd(e){document.querySelectorAll(".col-chip").forEach(c=>{c.classList.remove("drag-target");c.classList.remove("dragging");});dragSrcIdx=null;}
+
+// ═══════════════════════════════════════════
+// DATE FORMAT ENGINE
+// ═══════════════════════════════════════════
+const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function formatDateDisplay(internalDate, fmt) {
+  if (!internalDate) return "—";
+  // Internal format is always DD-MM-YYYY
+  const p = internalDate.split("-");
+  if (p.length !== 3) return internalDate;
+  const dd = p[0], mm = p[1], yyyy = p[2];
+  const mmIdx = parseInt(mm) - 1;
+
+  switch(fmt) {
+    case "DD-MM-YYYY": return `${dd}-${mm}-${yyyy}`;
+    case "MM-DD-YYYY": return `${mm}-${dd}-${yyyy}`;
+    case "YYYY-MM-DD": return `${yyyy}-${mm}-${dd}`;
+    case "DD/MM/YYYY": return `${dd}/${mm}/${yyyy}`;
+    case "DD-Mon-YYYY": return `${dd}-${MONTH_NAMES[mmIdx]||mm}-${yyyy}`;
+    default:
+      // Custom format
+      return fmt.replace(/YYYY/g, yyyy).replace(/MM/g, mm).replace(/DD/g, dd)
+               .replace(/Mon/g, MONTH_NAMES[mmIdx]||mm).replace(/mm/g, mm).replace(/dd/g, dd);
+  }
+}
+
+function changeDateFormat(fmt) {
+  if (fmt === "custom") {
+    document.getElementById("dateFmtCustom").style.display = "inline-block";
+    return;
+  }
+  document.getElementById("dateFmtCustom").style.display = "none";
+  S.dateFmt = fmt;
+  renderTable();
+}
+
+// ═══════════════════════════════════════════
+// DEEP FILTER ENGINE
+// ═══════════════════════════════════════════
+let dfOpen = false;
+
+function toggleDeepFilter() {
+  dfOpen = !dfOpen;
+  document.getElementById("deepFilterPanel").style.display = dfOpen ? "block" : "none";
+  if (dfOpen && S.dfRules.length === 0) addDfRule();
+  renderDfRules();
+  renderPresets();
+}
+
+function switchDfTab(tab) {
+  document.getElementById("dfTabRules").classList.toggle("active", tab === "rules");
+  document.getElementById("dfTabExpr").classList.toggle("active", tab === "expr");
+  document.getElementById("dfRulesPane").style.display = tab === "rules" ? "block" : "none";
+  document.getElementById("dfExprPane").style.display = tab === "expr" ? "block" : "none";
+}
+
+function addDfRule() {
+  S.dfRules.push({ col: "description", op: "contains", val: "" });
+  renderDfRules();
+}
+
+function removeDfRule(idx) {
+  S.dfRules.splice(idx, 1);
+  renderDfRules();
+}
+
+function renderDfRules() {
+  const colOpts = [
+    {v:"description",l:"Description"},{v:"reference",l:"Reference"},{v:"debit",l:"Debit"},{v:"credit",l:"Credit"},
+    {v:"balance",l:"Balance"},{v:"trans_date",l:"Trans Date"},{v:"bank_name",l:"Bank Name"},
+    {v:"net_amount",l:"Net Amount"},{v:"dr_cr_indicator",l:"Dr/Cr"},{v:"sr_no",l:"Sr. No."},
+  ];
+  const opOpts = [
+    {v:"contains",l:"contains"},{v:"not_contains",l:"does not contain"},{v:"equals",l:"equals"},{v:"not_equals",l:"does not equal"},
+    {v:"starts",l:"starts with"},{v:"ends",l:"ends with"},
+    {v:"gt",l:">"},{v:"gte",l:">="},{v:"lt",l:"<"},{v:"lte",l:"<="},{v:"empty",l:"is empty"},{v:"not_empty",l:"is not empty"},
+  ];
+  document.getElementById("dfRules").innerHTML = S.dfRules.map((r, i) => {
+    const colSel = `<select onchange="S.dfRules[${i}].col=this.value">${colOpts.map(o=>`<option value="${o.v}"${r.col===o.v?" selected":""}>${o.l}</option>`).join("")}</select>`;
+    const opSel = `<select onchange="S.dfRules[${i}].op=this.value">${opOpts.map(o=>`<option value="${o.v}"${r.op===o.v?" selected":""}>${o.l}</option>`).join("")}</select>`;
+    const needsVal = !["empty","not_empty"].includes(r.op);
+    const valIn = needsVal ? `<input value="${r.val||""}" placeholder="value..." onchange="S.dfRules[${i}].val=this.value">` : "";
+    return `<div class="df-rule">${i>0?'<span style="font-size:11px;color:var(--text-muted);font-weight:600">AND</span>':''}${colSel}${opSel}${valIn}<button class="df-remove" onclick="removeDfRule(${i})">×</button></div>`;
+  }).join("");
+}
+
+function evalDfRule(rule, row) {
+  const val = row[rule.col];
+  const sv = (val === null || val === undefined) ? "" : String(val).toLowerCase();
+  const rv = (rule.val || "").toLowerCase();
+  const nv = parseFloat(rv);
+  const numVal = typeof val === "number" ? val : parseFloat(sv);
+
+  switch(rule.op) {
+    case "contains": return sv.includes(rv);
+    case "not_contains": return !sv.includes(rv);
+    case "equals": return sv === rv;
+    case "not_equals": return sv !== rv;
+    case "starts": return sv.startsWith(rv);
+    case "ends": return sv.endsWith(rv);
+    case "gt": return numVal > nv;
+    case "gte": return numVal >= nv;
+    case "lt": return numVal < nv;
+    case "lte": return numVal <= nv;
+    case "empty": return !val && val !== 0;
+    case "not_empty": return !!val || val === 0;
+    default: return true;
+  }
+}
+
+function applyDeepFilter() {
+  S.dfActive = true;
+  S.dfExpr = "";
+  doFilter(); renderTable(); renderPagination(); renderSummary(); updateBadge();
+}
+
+function applyExprFilter() {
+  const expr = document.getElementById("dfExprInput").value.trim();
+  if (!expr) return;
+  // Test expression
+  try {
+    if (S.merged.length) {
+      const r = S.merged[0];
+      new Function("sr_no","trans_date","value_date","description","reference","debit","credit","balance","bank_name","net_amount","dr_cr_indicator","return("+expr+")")(r.sr_no,r.trans_date,r.value_date,r.description,r.reference,r.debit,r.credit,r.balance,r.bank_name,r.net_amount,r.dr_cr_indicator);
+    }
+  } catch(e) { return alert("Expression error: " + e.message); }
+  S.dfExpr = expr;
+  S.dfActive = true;
+  doFilter(); renderTable(); renderPagination(); renderSummary(); updateBadge();
+}
+
+function clearDeepFilter() {
+  S.dfRules = [];
+  S.dfExpr = "";
+  S.dfActive = false;
+  document.getElementById("dfExprInput").value = "";
+  addDfRule();
+  renderDfRules();
+  doFilter(); renderTable(); renderPagination(); renderSummary(); updateBadge();
+}
+
+function savePreset() {
+  const name = prompt("Name this filter preset:");
+  if (!name) return;
+  const preset = { name };
+  if (S.dfExpr) preset.expr = S.dfExpr;
+  else if (S.dfRules.length) preset.rules = JSON.parse(JSON.stringify(S.dfRules));
+  S.presets.push(preset);
+  renderPresets();
+  // Save to localStorage if available
+  try { localStorage.setItem("bsc_presets", JSON.stringify(S.presets)); } catch(e) {}
+}
+
+function loadPreset(idx) {
+  const p = S.presets[idx];
+  if (!p) return;
+  if (p.expr) {
+    S.dfExpr = p.expr;
+    S.dfRules = [];
+    document.getElementById("dfExprInput").value = p.expr;
+    switchDfTab("expr");
+  } else if (p.rules) {
+    S.dfRules = JSON.parse(JSON.stringify(p.rules));
+    S.dfExpr = "";
+    switchDfTab("rules");
+    renderDfRules();
+  }
+  S.dfActive = true;
+  doFilter(); renderTable(); renderPagination(); renderSummary(); updateBadge();
+}
+
+function removePreset(idx) {
+  S.presets.splice(idx, 1);
+  renderPresets();
+  try { localStorage.setItem("bsc_presets", JSON.stringify(S.presets)); } catch(e) {}
+}
+
+function renderPresets() {
+  document.getElementById("dfPresets").innerHTML = S.presets.map((p, i) =>
+    `<div class="df-preset" onclick="loadPreset(${i})">📌 ${p.name}<span class="preset-x" onclick="event.stopPropagation();removePreset(${i})">×</span></div>`
+  ).join("");
+}
+
+// Load presets from localStorage on init
+try { const sp = localStorage.getItem("bsc_presets"); if(sp) S.presets = JSON.parse(sp); } catch(e) {}
+
+// ═══════════════════════════════════════════
+// FILTER / SORT — with deep filter support
+// ═══════════════════════════════════════════
+function applyFilters(){doFilter();renderTable();renderPagination();renderSummary();updateBadge();if(currentView==="analytics")renderAnalytics();}
+function doFilter(){
+  const q=(document.getElementById("filterSearch")?.value||"").toLowerCase();
+  const tp=document.getElementById("filterType")?.value||"all";
+  const df=document.getElementById("filterDateFrom")?.value||"";
+  const dt=document.getElementById("filterDateTo")?.value||"";
+  let d=[...S.merged];
+
+  // Basic filters
+  if(q)d=d.filter(r=>(r.description||"").toLowerCase().includes(q)||(r.reference||"").toLowerCase().includes(q)||(r.bank_name||"").toLowerCase().includes(q));
+  if(tp==="debit")d=d.filter(r=>r.debit&&r.debit>0);
+  if(tp==="credit")d=d.filter(r=>r.credit&&r.credit>0);
+
+  // Date filters (internal dates are DD-MM-YYYY)
+  if(df){const fp=df.split("-");const fv=new Date(fp[0],fp[1]-1,fp[2]);fv.setHours(0,0,0,0);d=d.filter(r=>{if(!r.trans_date)return false;const p=r.trans_date.split("-");if(p.length!==3)return false;const rd=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));rd.setHours(0,0,0,0);return rd>=fv;});}
+  if(dt){const tp2=dt.split("-");const tv=new Date(tp2[0],tp2[1]-1,tp2[2]);tv.setHours(23,59,59,999);d=d.filter(r=>{if(!r.trans_date)return false;const p=r.trans_date.split("-");if(p.length!==3)return false;const rd=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));rd.setHours(0,0,0,0);return rd<=tv;});}
+
+  // Deep filter — column rules (AND logic)
+  if(S.dfActive && S.dfRules.length > 0 && !S.dfExpr) {
+    d = d.filter(r => S.dfRules.every(rule => !rule.val && !["empty","not_empty"].includes(rule.op) ? true : evalDfRule(rule, r)));
+  }
+
+  // Deep filter — expression
+  if(S.dfActive && S.dfExpr) {
+    try {
+      const fn = new Function("sr_no","trans_date","value_date","description","reference","debit","credit","balance","bank_name","net_amount","dr_cr_indicator","return("+S.dfExpr+")");
+      d = d.filter(r => {
+        try { return fn(r.sr_no,r.trans_date,r.value_date,r.description,r.reference,r.debit,r.credit,r.balance,r.bank_name,r.net_amount,r.dr_cr_indicator); } catch(e) { return false; }
+      });
+    } catch(e) {}
+  }
+
+  // Per-column filters
+  const activeColFilters = Object.entries(S.colFilters).filter(([k,v]) => v && v.trim());
+  if (activeColFilters.length) {
+    d = d.filter(r => {
+      return activeColFilters.every(([colKey, filterVal]) => {
+        const fv = filterVal.trim();
+        const fvl = fv.toLowerCase();
+        const cellVal = r[colKey];
+        const cellStr = String(cellVal ?? "").toLowerCase();
+
+        // Multi-select via || separator (from drill-down dropdown)
+        if (fv.includes("||")) {
+          const allowed = fv.split("||").map(v => v.trim().toLowerCase());
+          return allowed.some(av => {
+            if (av.startsWith("=")) return cellStr === av.slice(1);
+            return cellStr === av || cellStr.includes(av);
+          });
+        }
+
+        // Numeric comparisons: >100, <500, >=1000, <=200, =500, !=0
+        const numMatch = fvl.match(/^(>=|<=|!=|>|<|=)\s*([\d,.]+)$/);
+        if (numMatch) {
+          const op = numMatch[1];
+          const num = parseFloat(numMatch[2].replace(/,/g, ""));
+          const cv = typeof cellVal === "number" ? cellVal : parseFloat(cellStr.replace(/,/g, ""));
+          if (isNaN(cv)) return false;
+          switch(op) {
+            case ">": return cv > num;
+            case "<": return cv < num;
+            case ">=": return cv >= num;
+            case "<=": return cv <= num;
+            case "=": return cv === num;
+            case "!=": return cv !== num;
+          }
+        }
+
+        // Text: "!keyword" = does NOT contain
+        if (fvl.startsWith("!")) {
+          return !cellStr.includes(fvl.slice(1).trim());
+        }
+
+        // Text: "=exact" = exact match
+        if (fvl.startsWith("=")) {
+          return cellStr === fvl.slice(1).trim();
+        }
+
+        // Default: contains (case-insensitive)
+        return cellStr.includes(fvl);
+      });
+    });
+  }
+
+  const hasColFilter = activeColFilters.length > 0;
+  const hasFilter = q || tp!=="all" || df || dt || S.dfActive || hasColFilter;
+  const btn=document.getElementById("btnClear");if(btn)btn.style.display=hasFilter?"inline-block":"none";
+  if(S.sortKey){const dir=S.sortDir==="asc"?1:-1;d.sort((a,b)=>{let va=a[S.sortKey]??"",vb=b[S.sortKey]??"";if(typeof va==="number"&&typeof vb==="number")return(va-vb)*dir;return String(va).localeCompare(String(vb))*dir;});}
+  S.sorted=d;S.page=1;
+}
+function clearFilters(){document.getElementById("filterSearch").value="";document.getElementById("filterType").value="all";document.getElementById("filterDateFrom").value="";document.getElementById("filterDateTo").value="";S.colFilters={};clearDeepFilter();applyFilters();}
+function sortBy(k){if(S.sortKey===k)S.sortDir=S.sortDir==="asc"?"desc":"asc";else{S.sortKey=k;S.sortDir="asc";}doFilter();renderTable();renderPagination();}
+function changePageSize(v){S.pageSize=+v;S.page=1;renderTable();renderPagination();}
+function goPage(p){S.page=p;renderTable();renderPagination();}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render(){const has=S.merged.length>0;document.getElementById("headerActions").style.display=has?"flex":"none";document.getElementById("dataArea").style.display=has?"block":"none";document.getElementById("stepsGrid").style.display=has?"none":"grid";document.getElementById("dateFmtBar").style.display=has?"flex":"none";document.getElementById("viewTabs").style.display=has?"flex":"none";renderChips();if(has){renderSummary();renderColToggles();if(currentView==="table"){renderTable();renderPagination();}else{renderAnalytics();}updateBadge();}}
+
+function renderChips(){document.getElementById("fileChips").innerHTML=S.files.map((f,i)=>{const c=BANKS[f.bankCode]?.color||"#666";return`<div class="file-chip"><span class="chip-dot" style="background:${c}"></span><span class="chip-name" onclick="changeBankName(${i})" title="Click to change bank name" style="cursor:pointer;border-bottom:1px dashed currentColor">${f.bankName}</span><span class="chip-meta">(${f.totalRows} rows)</span><span class="chip-file">${f.fileName}</span><button class="chip-remove" onclick="removeFile(${i})">×</button></div>`;}).join("");}
+
+function changeBankName(fileIdx) {
+  const file = S.files[fileIdx];
+  if (!file) return;
+
+  // Build bank options list
+  const bankList = Object.entries(BANKS).map(([code, b]) => b.name);
+  bankList.push("Custom...");
+  
+  const current = file.bankName;
+  const choice = prompt(
+    "Change bank name for: " + file.fileName + "\n\n" +
+    "Current: " + current + "\n\n" +
+    "Available banks:\n" + 
+    Object.values(BANKS).map((b, i) => (i+1) + ". " + b.name).join("\n") + "\n\nType the bank name or a custom name:"
+  );
+  
+  if (!choice || choice.trim() === "") return;
+  
+  const newName = choice.trim();
+  
+  // Check if it matches a known bank
+  let newCode = "UNKNOWN";
+  for (const [code, b] of Object.entries(BANKS)) {
+    if (b.name.toLowerCase() === newName.toLowerCase()) {
+      newCode = code;
+      break;
+    }
+  }
+  
+  // Update file record
+  file.bankName = newName;
+  if (newCode !== "UNKNOWN") file.bankCode = newCode;
+  
+  // Update all rows from this file in merged data
+  for (const row of file.data) {
+    row.bank_name = newName;
+  }
+  
+  // Rebuild merged and re-render
+  rebuild();
+  render();
+}
+
+function renderSummary(){const d=S.sorted,dr=d.reduce((s,r)=>s+(r.debit||0),0),cr=d.reduce((s,r)=>s+(r.credit||0),0),net=cr-dr;const bc=BANKS[S.files[0]?.bankCode]?.color||"#3ee8d6";document.getElementById("summaryCards").innerHTML=[{l:"Showing Rows",v:d.length.toLocaleString()+" / "+S.merged.length.toLocaleString(),i:"📊",c:bc},{l:"Total Debits",v:"PKR "+dr.toLocaleString("en-PK",{minimumFractionDigits:2}),i:"🔴",c:"var(--red)"},{l:"Total Credits",v:"PKR "+cr.toLocaleString("en-PK",{minimumFractionDigits:2}),i:"🟢",c:"var(--green)"},{l:"Net Movement",v:"PKR "+net.toLocaleString("en-PK",{minimumFractionDigits:2}),i:"📈",c:net>=0?"var(--green)":"var(--red)"}].map(x=>`<div class="summary-card" style="border-left-color:${x.c}"><div class="summary-label">${x.i} ${x.l}</div><div class="summary-value" style="color:${x.c}">${x.v}</div></div>`).join("");}
+
+function renderColToggles(){
+  document.getElementById("colToggles").innerHTML=S.cols.map((col,idx)=>{
+    const isCust=col.type==="formula"||col.type==="smart",isAuto=col.type==="auto",isRemovable=isCust||isAuto,act=col.active;
+    let cls="col-chip"+(act?" active":"")+(isCust?" custom":"")+(isAuto?" auto":"");
+    const icon=col.type==="smart"?"🧠 ":col.type==="formula"?"⚡ ":col.type==="auto"?"📎 ":"";
+    return`<div class="${cls}" draggable="true" ondragstart="onColDragStart(event,${idx})" ondragover="onColDragOver(event,${idx})" ondrop="onColDrop(event,${idx})" ondragend="onColDragEnd(event)"><span class="col-label" onclick="toggleCol('${col.key}')">${act?"✓ ":""}${icon}${col.label}</span><span class="arrows"><button class="arr-btn" onclick="event.stopPropagation();moveCol('${col.key}',-1)">◂</button><button class="arr-btn" onclick="event.stopPropagation();moveCol('${col.key}',1)">▸</button></span>${isRemovable?`<button class="col-x" onclick="event.stopPropagation();removeCustomCol('${col.key}')">×</button>`:""}</div>`;
+  }).join("");
+}
+
+function activeCols(){return S.cols.filter(c=>c.active);}
+
+function renderTable(){
+  const cols=activeCols(),d=S.sorted,st=(S.page-1)*S.pageSize,pg=d.slice(st,st+S.pageSize);
+  const arr=k=>S.sortKey===k?(S.sortDir==="asc"?" ↑":" ↓"):"";
+  const isDateCol=k=>k==="trans_date"||k==="value_date";
+  const isNumCol=k=>["debit","credit","balance","net_amount","sr_no"].includes(k);
+  const fmt=(v,k)=>{
+    if(v==null)return"—";
+    if(isDateCol(k))return formatDateDisplay(v, S.dateFmt);
+    if(["debit","credit","balance","net_amount"].includes(k))return typeof v==="number"?v.toLocaleString("en-PK",{minimumFractionDigits:2,maximumFractionDigits:2}):v;
+    if(typeof v==="number")return v.toLocaleString("en-PK",{minimumFractionDigits:2,maximumFractionDigits:2});
+    return String(v);
+  };
+  const tc=(k,r,col)=>{let c=[];if(k==="debit"&&r.debit>0)c.push("td-debit");if(k==="credit"&&r.credit>0)c.push("td-credit");if(k==="description")c.push("td-desc");if(isNumCol(k))c.push("td-num");if(col.type==="formula"||col.type==="smart")c.push("td-custom");return c.join(" ");};
+
+  let h=`<table class="data-table"><thead><tr>`;
+  cols.forEach(c=>{const ic=c.type==="smart"?"🧠 ":c.type==="formula"?"⚡ ":c.type==="auto"?"📎 ":"";const hasCtx=(c.key==="description"||c.key==="reference")?' oncontextmenu="showExtractMenu(event,\''+c.key+'\')" title="Right-click to quick extract"':"";const hasDrCr=c.key==="dr_cr_indicator"?' ondblclick="generateTypeColumn()" title="Double-click to generate Type column (Payment/Receipt/Misc)"':"";h+=`<th onclick="sortBy('${c.key}')"${hasCtx}${hasDrCr}>${ic}${c.label}${arr(c.key)}</th>`;});
+  h+=`</tr>`;
+
+  // Filter row
+  h+=`<tr class="filter-row">`;
+  cols.forEach(c=>{
+    const val = S.colFilters[c.key] || "";
+    const hasVal = val.trim().length > 0;
+    const placeholder = isNumCol(c.key) ? ">100, <500..." : "Filter...";
+    h+=`<th><div class="col-filter-wrap${hasVal?" has-val":""}" id="cfw_${c.key}">`;
+    h+=`<input class="col-filter${hasVal?" col-filter-active":""}" value="${val.replace(/"/g,"&quot;")}" placeholder="${placeholder}" `;
+    h+=`oninput="onColFilter('${c.key}',this.value)" `;
+    h+=`onkeydown="if(event.key==='Enter')applyFilters()">`;
+    h+=`<button class="col-dd-btn" onclick="event.stopPropagation();toggleColDropdown('${c.key}')" title="Show unique values">▼</button>`;
+    h+=`<button class="col-filter-clear" onclick="event.stopPropagation();onColFilter('${c.key}','');this.parentElement.querySelector('.col-filter').value=''">×</button>`;
+    h+=`</div></th>`;
+  });
+  h+=`</tr></thead><tbody>`;
+
+  if(!pg.length)h+=`<tr><td colspan="${cols.length}" class="td-empty">No transactions match your filters</td></tr>`;
+  else pg.forEach(r=>{h+=`<tr>`;cols.forEach(c=>{h+=`<td class="${tc(c.key,r,c)}">${fmt(r[c.key],c.key)}</td>`;});h+=`</tr>`;});
+  h+=`</tbody></table>`;document.getElementById("tableWrap").innerHTML=h;
+}
+
+// ═══════════════════════════════════════════
+// PER-COLUMN FILTER + DRILL-DOWN DROPDOWN
+// ═══════════════════════════════════════════
+let colFilterTimer = null;
+function onColFilter(colKey, val) {
+  S.colFilters[colKey] = val;
+  clearTimeout(colFilterTimer);
+  colFilterTimer = setTimeout(() => applyFilters(), 350);
+}
+
+let activeDropdown = null;
+
+function toggleColDropdown(colKey) {
+  // Close if already open for same column
+  if (activeDropdown === colKey) { closeColDropdown(); return; }
+  closeColDropdown();
+  activeDropdown = colKey;
+
+  const wrap = document.getElementById("cfw_" + colKey);
+  if (!wrap) return;
+
+  // ── Cascading filter: apply ALL filters EXCEPT this column's own filter ──
+  const q = (document.getElementById("filterSearch")?.value || "").toLowerCase();
+  const tp = document.getElementById("filterType")?.value || "all";
+  const df = document.getElementById("filterDateFrom")?.value || "";
+  const dt = document.getElementById("filterDateTo")?.value || "";
+
+  let contextData = [...S.merged];
+
+  // Apply global search
+  if (q) contextData = contextData.filter(r => (r.description || "").toLowerCase().includes(q) || (r.reference || "").toLowerCase().includes(q) || (r.bank_name || "").toLowerCase().includes(q));
+  // Apply debit/credit filter
+  if (tp === "debit") contextData = contextData.filter(r => r.debit && r.debit > 0);
+  if (tp === "credit") contextData = contextData.filter(r => r.credit && r.credit > 0);
+  // Apply date filters
+  if (df) { const fp = df.split("-"); const fv = new Date(fp[0], fp[1]-1, fp[2]); fv.setHours(0,0,0,0); contextData = contextData.filter(r => { if (!r.trans_date) return false; const p = r.trans_date.split("-"); if (p.length !== 3) return false; const rd = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); rd.setHours(0,0,0,0); return rd >= fv; }); }
+  if (dt) { const tp2 = dt.split("-"); const tv = new Date(tp2[0], tp2[1]-1, tp2[2]); tv.setHours(23,59,59,999); contextData = contextData.filter(r => { if (!r.trans_date) return false; const p = r.trans_date.split("-"); if (p.length !== 3) return false; const rd = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); rd.setHours(0,0,0,0); return rd <= tv; }); }
+
+  // Apply deep filters
+  if (S.dfActive && S.dfRules.length > 0 && !S.dfExpr) {
+    contextData = contextData.filter(r => S.dfRules.every(rule => !rule.val && !["empty","not_empty"].includes(rule.op) ? true : evalDfRule(rule, r)));
+  }
+  if (S.dfActive && S.dfExpr) {
+    try {
+      const fn = new Function("sr_no","trans_date","value_date","description","reference","debit","credit","balance","bank_name","net_amount","dr_cr_indicator","return(" + S.dfExpr + ")");
+      contextData = contextData.filter(r => { try { return fn(r.sr_no, r.trans_date, r.value_date, r.description, r.reference, r.debit, r.credit, r.balance, r.bank_name, r.net_amount, r.dr_cr_indicator); } catch(e) { return false; } });
+    } catch(e) {}
+  }
+
+  // Apply all OTHER column filters (not this column's)
+  const otherFilters = Object.entries(S.colFilters).filter(([k, v]) => k !== colKey && v && v.trim());
+  if (otherFilters.length) {
+    contextData = contextData.filter(r => {
+      return otherFilters.every(([ck, fv]) => {
+        const fvt = fv.trim();
+        const fvl = fvt.toLowerCase();
+        const cellVal = r[ck];
+        const cellStr = String(cellVal ?? "").toLowerCase();
+        if (fvt.includes("||")) { const allowed = fvt.split("||").map(v => v.trim().toLowerCase()); return allowed.some(av => av.startsWith("=") ? cellStr === av.slice(1) : cellStr === av || cellStr.includes(av)); }
+        const numMatch = fvl.match(/^(>=|<=|!=|>|<|=)\s*([\d,.]+)$/);
+        if (numMatch) { const op = numMatch[1]; const num = parseFloat(numMatch[2].replace(/,/g, "")); const cv = typeof cellVal === "number" ? cellVal : parseFloat(cellStr.replace(/,/g, "")); if (isNaN(cv)) return false; switch(op) { case ">": return cv > num; case "<": return cv < num; case ">=": return cv >= num; case "<=": return cv <= num; case "=": return cv === num; case "!=": return cv !== num; } }
+        if (fvl.startsWith("!")) return !cellStr.includes(fvl.slice(1).trim());
+        if (fvl.startsWith("=")) return cellStr === fvl.slice(1).trim();
+        return cellStr.includes(fvl);
+      });
+    });
+  }
+
+  // ── Now count unique values from the filtered context ──
+  const valCount = {};
+  contextData.forEach(r => {
+    let v = r[colKey];
+    if (v === null || v === undefined) v = "(empty)";
+    else v = String(v).trim();
+    if (v === "") v = "(empty)";
+    valCount[v] = (valCount[v] || 0) + 1;
+  });
+
+  // Sort: by count descending, then alphabetical
+  let entries = Object.entries(valCount).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  // Determine which are currently selected (if filter is a multi-select via ||)
+  const currentFilter = (S.colFilters[colKey] || "").trim();
+  const isMultiSelect = currentFilter.includes("||");
+  const selectedVals = new Set();
+  if (isMultiSelect) {
+    currentFilter.split("||").forEach(v => selectedVals.add(v.trim().toLowerCase()));
+  } else if (currentFilter && !currentFilter.match(/^[><=!]/)) {
+    selectedVals.add(currentFilter.toLowerCase());
+  }
+
+  // Build dropdown
+  const dd = document.createElement("div");
+  dd.className = "col-dropdown";
+  dd.onclick = e => e.stopPropagation();
+
+  // Search within dropdown
+  dd.innerHTML = `
+    <div class="col-dd-search"><input placeholder="Search values..." oninput="filterDropdownItems(this.value)"></div>
+    <div class="col-dd-actions">
+      <button onclick="ddSelectAll('${colKey}')">Select All</button>
+      <button onclick="ddClearAll('${colKey}')">Clear All</button>
+      <button onclick="ddApplySelection('${colKey}')">Apply</button>
+    </div>
+    <div class="col-dd-list" id="ddList_${colKey}"></div>
+  `;
+  wrap.appendChild(dd);
+
+  // Populate items
+  renderDropdownItems(colKey, entries, selectedVals);
+
+  // Focus search
+  setTimeout(() => dd.querySelector("input")?.focus(), 50);
+}
+
+function renderDropdownItems(colKey, entries, selectedVals) {
+  const list = document.getElementById("ddList_" + colKey);
+  if (!list) return;
+
+  // Cap at 500 unique values for performance
+  const show = entries.slice(0, 500);
+  list.innerHTML = show.map(([val, count]) => {
+    const checked = selectedVals.size === 0 || selectedVals.has(val.toLowerCase());
+    const displayVal = val.length > 35 ? val.slice(0, 35) + "…" : val;
+    return `<label class="col-dd-item" data-val="${val.replace(/"/g,"&quot;").toLowerCase()}">
+      <input type="checkbox" ${checked ? "checked" : ""} value="${val.replace(/"/g,"&quot;")}">
+      <span>${displayVal}</span>
+      <span class="dd-count">${count}</span>
+    </label>`;
+  }).join("");
+
+  if (entries.length > 500) {
+    list.innerHTML += `<div style="padding:6px 8px;font-size:10px;color:var(--text-muted);text-align:center">Showing top 500 of ${entries.length} values</div>`;
+  }
+}
+
+function filterDropdownItems(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll(".col-dd-list .col-dd-item").forEach(item => {
+    const val = item.dataset.val || "";
+    item.style.display = val.includes(q) ? "" : "none";
+  });
+}
+
+function ddSelectAll(colKey) {
+  document.querySelectorAll("#ddList_" + colKey + " input[type=checkbox]").forEach(cb => {
+    if (cb.closest(".col-dd-item").style.display !== "none") cb.checked = true;
+  });
+}
+
+function ddClearAll(colKey) {
+  document.querySelectorAll("#ddList_" + colKey + " input[type=checkbox]").forEach(cb => {
+    if (cb.closest(".col-dd-item").style.display !== "none") cb.checked = false;
+  });
+}
+
+function ddApplySelection(colKey) {
+  const checkboxes = document.querySelectorAll("#ddList_" + colKey + " input[type=checkbox]");
+  const allVals = [];
+  const selectedVals = [];
+  checkboxes.forEach(cb => {
+    allVals.push(cb.value);
+    if (cb.checked) selectedVals.push(cb.value);
+  });
+
+  // If all selected or none selected, clear filter
+  if (selectedVals.length === allVals.length || selectedVals.length === 0) {
+    S.colFilters[colKey] = "";
+  } else if (selectedVals.length === 1) {
+    // Single value — use exact match
+    S.colFilters[colKey] = "=" + selectedVals[0];
+  } else {
+    // Multiple values — use || separator (custom multi-select)
+    S.colFilters[colKey] = selectedVals.join("||");
+  }
+
+  closeColDropdown();
+  applyFilters();
+}
+
+function closeColDropdown() {
+  document.querySelectorAll(".col-dropdown").forEach(dd => dd.remove());
+  activeDropdown = null;
+}
+
+// Close dropdown on outside click
+document.addEventListener("click", (e) => {
+  if (activeDropdown && !e.target.closest(".col-filter-wrap")) {
+    closeColDropdown();
+  }
+});
+
+function renderPagination(){const tot=S.sorted.length,pgs=Math.ceil(tot/S.pageSize);if(pgs<=1){document.getElementById("pagination").innerHTML=`<span class="info">${tot.toLocaleString()} rows</span><div></div>`;return;}const p=S.page,s=(p-1)*S.pageSize+1,e=Math.min(p*S.pageSize,tot);document.getElementById("pagination").innerHTML=`<span class="info">Showing ${s}–${e} of ${tot.toLocaleString()}</span><div class="page-btns"><button class="pg-btn" onclick="goPage(1)" ${p<=1?"disabled":""}>⟪</button><button class="pg-btn" onclick="goPage(${p-1})" ${p<=1?"disabled":""}>‹</button><span class="page-label">Page ${p} of ${pgs}</span><button class="pg-btn" onclick="goPage(${p+1})" ${p>=pgs?"disabled":""}>›</button><button class="pg-btn" onclick="goPage(${pgs})" ${p>=pgs?"disabled":""}>⟫</button></div>`;}
+
+function updateBadge(){const el=document.getElementById("exportBadge"),sh=S.sorted.length,tot=S.merged.length,ac=activeCols().length,tc=S.cols.length;if(sh<tot||ac<tc){el.style.display="inline-block";el.textContent=`Export: ${sh.toLocaleString()} rows × ${ac} cols`;}else el.style.display="none";}
+
+// ═══════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════
+function internalDateToJS(dateStr) {
+  // Convert internal DD-MM-YYYY to a JavaScript Date for Excel
+  if (!dateStr) return null;
+  const p = dateStr.split("-");
+  if (p.length !== 3) return null;
+  const d = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Map our date format tokens to Excel date format codes
+function dateFmtToExcel(fmt) {
+  switch(fmt) {
+    case "DD-MM-YYYY": return "DD-MM-YYYY";
+    case "MM-DD-YYYY": return "MM-DD-YYYY";
+    case "YYYY-MM-DD": return "YYYY-MM-DD";
+    case "DD/MM/YYYY": return "DD/MM/YYYY";
+    case "DD-Mon-YYYY": return "DD-MMM-YYYY";
+    default: return fmt.replace(/Mon/g, "MMM");
+  }
+}
+
+function exportToExcel(){
+  const cols=activeCols(), data=S.sorted;
+  const isDateCol=k=>k==="trans_date"||k==="value_date";
+
+  // Build data array with proper types
+  const out=data.map(row=>{
+    const o={};
+    cols.forEach(c=>{
+      let v=row[c.key]??"";
+      if(isDateCol(c.key) && v){
+        const jsDate = internalDateToJS(v);
+        o[c.label] = jsDate || v; // Use Date object if parseable, else string fallback
+      } else {
+        o[c.label]=v;
+      }
+    });
+    return o;
+  });
+
+  const ws=XLSX.utils.json_to_sheet(out, {cellDates:true});
+
+  // Apply date formatting to date columns
+  const excelDateFmt = dateFmtToExcel(S.dateFmt);
+  const dateColIndices = [];
+  cols.forEach((c, i) => { if(isDateCol(c.key)) dateColIndices.push(i); });
+
+  // Walk through all cells and set date format on date columns
+  const range = XLSX.utils.decode_range(ws['!ref'] || "A1");
+  for (let R = range.s.r + 1; R <= range.e.r; R++) { // skip header row
+    for (const ci of dateColIndices) {
+      const addr = XLSX.utils.encode_cell({r: R, c: ci});
+      const cell = ws[addr];
+      if (cell && cell.t === 'd') {
+        cell.z = excelDateFmt;
+      } else if (cell && cell.t === 'n') {
+        cell.z = excelDateFmt;
+      }
+    }
+  }
+
+  // Set column widths
+  ws["!cols"]=cols.map(c=>({wch:Math.max(c.label.length+2,c.key==="description"?40:isDateCol(c.key)?14:18)}));
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Bank Statement");
+  XLSX.writeFile(wb,"Oracle_Statement_"+new Date().toISOString().slice(0,10)+".xlsx");
+}
+
+// ═══════════════════════════════════════════
+// VIEW SWITCHING
+// ═══════════════════════════════════════════
+let currentView = "table";
+
+// ═══════════════════════════════════════════
+// AMOUNT MATCHER
+// ═══════════════════════════════════════════
+let amtOpen = false;
+function toggleAmountMatcher() {
+  amtOpen = !amtOpen;
+  document.getElementById("amtPanel").style.display = amtOpen ? "block" : "none";
+  if (amtOpen) document.getElementById("amtInput").focus();
+}
+
+function runAmountMatch() {
+  const raw = document.getElementById("amtInput").value.replace(/[,\s]/g, "");
+  const target = parseFloat(raw);
+  if (isNaN(target) || target === 0) return alert("Please enter a valid amount.");
+
+  const field = document.getElementById("amtField").value;
+  const scope = document.getElementById("amtScope").value;
+  const tolerance = parseFloat(document.getElementById("amtTolerance").value);
+  const data = scope === "filtered" ? S.sorted : S.merged;
+
+  const results = [];
+
+  // ── 1. Individual exact/close matches ──
+  const exactMatches = [];
+  data.forEach((r, idx) => {
+    const fields = field === "both" ? ["debit", "credit"] : [field];
+    fields.forEach(f => {
+      const v = r[f];
+      if (v !== null && v !== undefined && typeof v === "number") {
+        const diff = Math.abs(v - target);
+        if (diff <= tolerance) {
+          exactMatches.push({ row: r, field: f, value: v, diff, idx });
+        }
+      }
+    });
+  });
+
+  if (exactMatches.length > 0) {
+    exactMatches.sort((a, b) => a.diff - b.diff);
+    results.push({
+      type: "exact",
+      label: `Individual Transactions = ${fmtPKR(target)}` + (tolerance > 0 ? ` (±${tolerance})` : ""),
+      matches: exactMatches.slice(0, 50),
+      total: exactMatches.length,
+      sum: exactMatches.reduce((s, m) => s + m.value, 0),
+    });
+  }
+
+  // ── 2. Find groups that sum to the target (by code, type, date, bank) ──
+  const groupBy = (key) => {
+    const groups = {};
+    data.forEach(r => {
+      const gk = String(r[key] || "(empty)");
+      if (!groups[gk]) groups[gk] = { label: gk, dr: 0, cr: 0, rows: [] };
+      groups[gk].dr += (r.debit || 0);
+      groups[gk].cr += (r.credit || 0);
+      groups[gk].rows.push(r);
+    });
+    return groups;
+  };
+
+  // Check code groups
+  if (data[0] && data[0]._code_col !== undefined) {
+    const codeGroups = groupBy("_code_col");
+    Object.values(codeGroups).forEach(g => {
+      if (Math.abs(g.dr - target) <= tolerance) {
+        results.push({ type: "sum", label: `Code ${g.label} — Total Debit`, matches: g.rows, total: g.rows.length, sum: g.dr, groupKey: "_code_col", groupVal: g.label });
+      }
+      if (Math.abs(g.cr - target) <= tolerance) {
+        results.push({ type: "sum", label: `Code ${g.label} — Total Credit`, matches: g.rows, total: g.rows.length, sum: g.cr, groupKey: "_code_col", groupVal: g.label });
+      }
+    });
+  }
+
+  // Check type groups
+  if (data[0] && data[0]._type_col !== undefined) {
+    const typeGroups = groupBy("_type_col");
+    Object.values(typeGroups).forEach(g => {
+      if (Math.abs(g.dr - target) <= tolerance) {
+        results.push({ type: "sum", label: `Type "${g.label}" — Total Debit`, matches: g.rows, total: g.rows.length, sum: g.dr, groupKey: "_type_col", groupVal: g.label });
+      }
+      if (Math.abs(g.cr - target) <= tolerance) {
+        results.push({ type: "sum", label: `Type "${g.label}" — Total Credit`, matches: g.rows, total: g.rows.length, sum: g.cr, groupKey: "_type_col", groupVal: g.label });
+      }
+    });
+  }
+
+  // Check date groups
+  const dateGroups = groupBy("trans_date");
+  Object.values(dateGroups).forEach(g => {
+    if (Math.abs(g.dr - target) <= tolerance) {
+      results.push({ type: "sum", label: `Date ${g.label} — Total Debit`, matches: g.rows, total: g.rows.length, sum: g.dr, groupKey: "trans_date", groupVal: g.label });
+    }
+    if (Math.abs(g.cr - target) <= tolerance) {
+      results.push({ type: "sum", label: `Date ${g.label} — Total Credit`, matches: g.rows, total: g.rows.length, sum: g.cr, groupKey: "trans_date", groupVal: g.label });
+    }
+  });
+
+  // Check bank groups
+  const bankGroups = groupBy("bank_name");
+  Object.values(bankGroups).forEach(g => {
+    if (Math.abs(g.dr - target) <= tolerance) {
+      results.push({ type: "sum", label: `Bank "${g.label}" — Total Debit`, matches: g.rows, total: g.rows.length, sum: g.dr, groupKey: "bank_name", groupVal: g.label });
+    }
+    if (Math.abs(g.cr - target) <= tolerance) {
+      results.push({ type: "sum", label: `Bank "${g.label}" — Total Credit`, matches: g.rows, total: g.rows.length, sum: g.cr, groupKey: "bank_name", groupVal: g.label });
+    }
+  });
+
+  // ── 3. Check Dr/Cr indicator groups ──
+  const drcrGroups = groupBy("dr_cr_indicator");
+  Object.values(drcrGroups).forEach(g => {
+    if (Math.abs(g.dr - target) <= tolerance) {
+      results.push({ type: "sum", label: `All "${g.label}" — Total Debit`, matches: g.rows, total: g.rows.length, sum: g.dr, groupKey: "dr_cr_indicator", groupVal: g.label });
+    }
+    if (Math.abs(g.cr - target) <= tolerance) {
+      results.push({ type: "sum", label: `All "${g.label}" — Total Credit`, matches: g.rows, total: g.rows.length, sum: g.cr, groupKey: "dr_cr_indicator", groupVal: g.label });
+    }
+  });
+
+  renderAmtResults(results, target);
+}
+
+function renderAmtResults(results, target) {
+  const el = document.getElementById("amtResults");
+  if (!results.length) {
+    el.innerHTML = `<div class="amt-none">No matches found for PKR ${fmtPKR(target)}. Try adjusting tolerance or search scope.</div>`;
+    return;
+  }
+
+  let html = "";
+  results.forEach((r, ri) => {
+    const tag = r.type === "exact" ? '<span class="amt-tag exact">INDIVIDUAL</span>' : '<span class="amt-tag sum">SUM MATCH</span>';
+    const diffNote = r.sum !== target ? ` (diff: ${fmtPKR(Math.abs(r.sum - target))})` : "";
+
+    html += `<div class="amt-result-card">`;
+    html += `<h5>${tag} ${r.label}</h5>`;
+    html += `<div class="amt-info">`;
+    html += `<strong>${r.total}</strong> transaction(s) · Total: <strong>PKR ${fmtPKR(r.sum)}</strong>${diffNote}`;
+    html += `</div>`;
+
+    if (r.type === "exact" && r.matches) {
+      // Show first few individual matches
+      const show = r.matches.slice(0, 8);
+      html += `<div style="font-size:11px;color:var(--text-muted);max-height:150px;overflow-y:auto;margin:6px 0">`;
+      show.forEach(m => {
+        html += `<div style="padding:2px 0;border-bottom:1px solid var(--border-light)">${m.row.trans_date || "—"} · ${(m.row.description||"").substring(0,50)} · <strong style="color:var(--accent)">${fmtPKR(m.value)}</strong> (${m.field})</div>`;
+      });
+      if (r.total > 8) html += `<div style="padding:4px 0;color:var(--text-muted)">...and ${r.total - 8} more</div>`;
+      html += `</div>`;
+      html += `<button class="amt-match-btn" onclick="amtFilterExact(${target})">Filter to these transactions</button>`;
+    }
+
+    if (r.type === "sum" && r.groupKey) {
+      html += `<button class="amt-match-btn" onclick="amtFilterGroup('${r.groupKey}','${(r.groupVal||"").replace(/'/g,"\\'")}')">Show these ${r.total} transactions</button>`;
+    }
+
+    html += `</div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function amtFilterExact(amount) {
+  const tol = parseFloat(document.getElementById("amtTolerance").value);
+  const field = document.getElementById("amtField").value;
+  // Set column filter for the relevant amount field
+  if (field === "both") {
+    // Can't do both in one column filter easily — use deep filter expression
+    S.dfExpr = `(Math.abs((debit||0) - ${amount}) <= ${tol}) || (Math.abs((credit||0) - ${amount}) <= ${tol})`;
+    S.dfActive = true;
+  } else {
+    S.colFilters[field] = "=" + amount;
+  }
+  switchView("table");
+  applyFilters();
+}
+
+function amtFilterGroup(key, val) {
+  S.colFilters[key] = "=" + val;
+  switchView("table");
+  applyFilters();
+}
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById("viewTabTable").classList.toggle("active", view === "table");
+  document.getElementById("viewTabAnalytics").classList.toggle("active", view === "analytics");
+  document.getElementById("tableViewArea").style.display = view === "table" ? "block" : "none";
+  document.getElementById("analyticsPanel").style.display = view === "analytics" ? "block" : "none";
+  if (view === "analytics") setTimeout(() => renderAnalytics(), 50);
+}
+
+// ═══════════════════════════════════════════
+// ANALYTICS ENGINE
+// ═══════════════════════════════════════════
+const CATS = {
+  salary: /salary|payroll|wage|income|stipend/i,
+  utility: /utility|bill|iesco|lesco|sngpl|sui.*gas|wapda|ptcl|electric|gas\s/i,
+  shopping: /pos|purchase|shop|mart|store|carrefour|metro|khaadi|jalal|fatah|imtiaz/i,
+  transfer: /ibft|nift|raast|transfer|remit|swift/i,
+  cash: /atm|withdraw|cash\s*dep|cdm|cash/i,
+  food: /food|panda|restaurant|cafe|pizza|kfc|mcdonald/i,
+  fuel: /fuel|petrol|parco|pso|shell|total|caltex/i,
+  charges: /bank\s*charge|fee|commission|wht|tax|zakat|penalty|markup|profit|interest|service\s*charge/i,
+  loan: /loan|installment|emi|repay|mortgage/i,
+  online: /online|daraz|amazon|easypaisa|jazzcash/i,
+};
+
+function categorize(desc) {
+  const d = (desc || "").toLowerCase();
+  for (const [cat, rx] of Object.entries(CATS)) {
+    if (rx.test(d)) return cat.charAt(0).toUpperCase() + cat.slice(1);
+  }
+  return "Other";
+}
+
+function parseMonthKey(dateStr) {
+  if (!dateStr) return null;
+  const p = dateStr.split("-");
+  if (p.length !== 3) return null;
+  return p[2] + "-" + p[1]; // YYYY-MM
+}
+
+function monthLabel(key) {
+  const mn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const [y, m] = key.split("-");
+  return mn[parseInt(m) - 1] + " " + y;
+}
+
+function computeAnalytics() {
+  const data = S.sorted;
+
+  // Monthly
+  const monthMap = {};
+  data.forEach(r => {
+    const mk = parseMonthKey(r.trans_date);
+    if (!mk) return;
+    if (!monthMap[mk]) monthMap[mk] = { label: monthLabel(mk), debit: 0, credit: 0, net: 0, count: 0, sortKey: mk };
+    monthMap[mk].debit += (r.debit || 0);
+    monthMap[mk].credit += (r.credit || 0);
+    monthMap[mk].net += (r.credit || 0) - (r.debit || 0);
+    monthMap[mk].count++;
+  });
+  const monthly = Object.values(monthMap).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+  // Bank-wise
+  const bankMap = {};
+  data.forEach(r => {
+    const bn = r.bank_name || "Unknown";
+    if (!bankMap[bn]) bankMap[bn] = { label: bn, debit: 0, credit: 0, net: 0, count: 0 };
+    bankMap[bn].debit += (r.debit || 0);
+    bankMap[bn].credit += (r.credit || 0);
+    bankMap[bn].net += (r.credit || 0) - (r.debit || 0);
+    bankMap[bn].count++;
+  });
+  const banks = Object.values(bankMap).sort((a, b) => b.count - a.count);
+
+  // Category-wise
+  const catMap = {};
+  data.forEach(r => {
+    const cat = categorize(r.description);
+    if (!catMap[cat]) catMap[cat] = { label: cat, debit: 0, credit: 0, net: 0, count: 0 };
+    catMap[cat].debit += (r.debit || 0);
+    catMap[cat].credit += (r.credit || 0);
+    catMap[cat].net += (r.credit || 0) - (r.debit || 0);
+    catMap[cat].count++;
+  });
+  const categories = Object.values(catMap).sort((a, b) => b.count - a.count);
+
+  // Daily
+  const dayMap = {};
+  data.forEach(r => {
+    const dk = r.trans_date;
+    if (!dk) return;
+    if (!dayMap[dk]) dayMap[dk] = { label: dk, debit: 0, credit: 0, net: 0, count: 0, balance: 0 };
+    dayMap[dk].debit += (r.debit || 0);
+    dayMap[dk].credit += (r.credit || 0);
+    dayMap[dk].net += (r.credit || 0) - (r.debit || 0);
+    dayMap[dk].count++;
+    dayMap[dk].balance = r.balance || dayMap[dk].balance;
+  });
+  const daily = Object.values(dayMap).sort((a, b) => {
+    const pa = a.label.split("-"), pb = b.label.split("-");
+    return (pa[2]+pa[1]+pa[0]).localeCompare(pb[2]+pb[1]+pb[0]);
+  });
+
+  // Type split
+  let payment = 0, receipt = 0, miscPay = 0, miscRec = 0;
+  const miscRx = /bank\s*charge|fee|commission|wht|tax|zakat|penalty|markup|profit|interest|service/i;
+  data.forEach(r => {
+    const isMisc = miscRx.test(r.description || "");
+    if (r.debit > 0) { if (isMisc) miscPay += r.debit; else payment += r.debit; }
+    if (r.credit > 0) { if (isMisc) miscRec += r.credit; else receipt += r.credit; }
+  });
+  const typeSplit = [
+    { label: "Payment", value: payment },
+    { label: "Receipt", value: receipt },
+    { label: "Misc Payment", value: miscPay },
+    { label: "Misc Receipt", value: miscRec },
+  ].filter(t => t.value > 0);
+
+  return { monthly, banks, categories, daily, typeSplit };
+}
+
+// ═══════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════
+let tooltipEl = null;
+function showTooltip(e, html) {
+  if (!tooltipEl) {
+    tooltipEl = document.createElement("div");
+    tooltipEl.style.cssText = "position:fixed;z-index:500;background:#1e2230;border:1px solid #3ee8d6;border-radius:8px;padding:10px 14px;font-size:12px;color:#e2e5eb;pointer-events:none;max-width:260px;box-shadow:0 4px 20px #00000066;font-family:'DM Sans',sans-serif;line-height:1.5;transition:opacity .15s;";
+    document.body.appendChild(tooltipEl);
+  }
+  tooltipEl.innerHTML = html;
+  tooltipEl.style.opacity = "1";
+  const x = Math.min(e.clientX + 12, window.innerWidth - 280);
+  const y = Math.min(e.clientY - 10, window.innerHeight - 100);
+  tooltipEl.style.left = x + "px";
+  tooltipEl.style.top = y + "px";
+}
+function hideTooltip() { if (tooltipEl) tooltipEl.style.opacity = "0"; }
+
+function drillDown(filterKey, filterVal) {
+  switchView("table");
+  S.colFilters[filterKey] = "=" + filterVal;
+  applyFilters();
+}
+
+function drillDownMonth(monthLabel) {
+  // monthLabel = "Mar 2026" → filter trans_date to that month
+  const mn = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const parts = monthLabel.split(" ");
+  const mIdx = mn.indexOf(parts[0]);
+  const mm = String(mIdx + 1).padStart(2, "0");
+  const yyyy = parts[1];
+  switchView("table");
+  S.colFilters.trans_date = mm + "-" + yyyy;
+  // Custom filter: match month in DD-MM-YYYY
+  applyFilters();
+}
+
+// Override doFilter to handle month substring match in colFilters
+const origDoFilter = typeof doFilter === 'function' ? null : null; // placeholder
+
+function fmtShort(v) {
+  if (v >= 1e9) return (v / 1e9).toFixed(1) + "B";
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
+  if (v >= 1e3) return (v / 1e3).toFixed(0) + "K";
+  return v.toFixed(0);
+}
+
+// ═══════════════════════════════════════════
+// CHART RENDERING — Interactive with tooltips + click
+// ═══════════════════════════════════════════
+const CHART_COLORS = ["#3ee8d6","#f0544f","#a78bfa","#fbbf24","#34d399","#f97316","#ec4899","#6366f1","#14b8a6","#e879f9","#84cc16","#fb923c"];
+
+function setupCanvas(canvasId, height) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width - 40;
+  canvas.width = W * dpr; canvas.height = height * dpr;
+  canvas.style.width = W + "px"; canvas.style.height = height + "px";
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, height);
+  return { canvas, ctx, W, H: height, dpr };
+}
+
+function drawBarChart(canvasId, labels, datasets, onClickLabel) {
+  const s = setupCanvas(canvasId, 300);
+  if (!s) return;
+  const { canvas, ctx, W, H } = s;
+  const pad = { t: 15, r: 15, b: 60, l: 75 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const maxVal = Math.max(...datasets.flatMap(ds => ds.data), 1);
+  const barGroupW = cW / (labels.length || 1);
+  const barW = Math.min(barGroupW * 0.3, 28);
+  const gap = barW * 0.2;
+
+  // Store bar positions for hover/click
+  const barRects = [];
+
+  // Y grid
+  ctx.strokeStyle = "#2a2e3d"; ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.t + cH - (cH * i / 5);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = "#6e7590"; ctx.font = "10px 'JetBrains Mono'"; ctx.textAlign = "right";
+    ctx.fillText(fmtShort(maxVal * i / 5), pad.l - 8, y + 3);
+  }
+
+  // Bars
+  datasets.forEach((ds, di) => {
+    ctx.fillStyle = ds.color;
+    ds.data.forEach((val, i) => {
+      const x = pad.l + barGroupW * i + barGroupW / 2 + (di - (datasets.length - 1) / 2) * (barW + gap);
+      const bH = (val / maxVal) * cH;
+      const rx = x - barW / 2, ry = pad.t + cH - bH;
+      ctx.beginPath(); ctx.roundRect(rx, ry, barW, bH, 3); ctx.fill();
+      barRects.push({ x: rx, y: ry, w: barW, h: bH, label: labels[i], ds: ds.label, val, color: ds.color, idx: i });
+    });
+  });
+
+  // X labels — rotated more for readability
+  ctx.fillStyle = "#6e7590"; ctx.font = "10px 'DM Sans'"; ctx.textAlign = "right";
+  labels.forEach((l, i) => {
+    const x = pad.l + barGroupW * i + barGroupW / 2;
+    ctx.save(); ctx.translate(x, H - 18); ctx.rotate(-0.5);
+    ctx.fillText(l, 0, 0); ctx.restore();
+  });
+
+  // Legend — bottom right
+  const ly = H - 14;
+  datasets.forEach((ds, i) => {
+    const lx = W - pad.r - (datasets.length - i) * 90;
+    ctx.fillStyle = ds.color; ctx.fillRect(lx, ly - 8, 10, 10);
+    ctx.fillStyle = "#e2e5eb"; ctx.font = "11px 'DM Sans'"; ctx.textAlign = "left";
+    ctx.fillText(ds.label, lx + 14, ly);
+  });
+
+  // Hover + Click
+  canvas.onmousemove = e => {
+    const r = canvas.getBoundingClientRect();
+    const mx = (e.clientX - r.left), my = (e.clientY - r.top);
+    const hit = barRects.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+    canvas.style.cursor = hit ? "pointer" : "default";
+    if (hit) showTooltip(e, `<strong>${hit.label}</strong><br>${hit.ds}: <span style="color:${hit.color}">PKR ${fmtPKR(hit.val)}</span><br><span style="font-size:10px;color:#6e7590">Click to drill down</span>`);
+    else hideTooltip();
+  };
+  canvas.onmouseleave = hideTooltip;
+  canvas.onclick = e => {
+    const r = canvas.getBoundingClientRect();
+    const mx = (e.clientX - r.left), my = (e.clientY - r.top);
+    const hit = barRects.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+    if (hit && onClickLabel) { hideTooltip(); onClickLabel(hit.label); }
+  };
+}
+
+function drawLineChart(canvasId, labels, data, color, onClickPoint) {
+  const s = setupCanvas(canvasId, 300);
+  if (!s) return;
+  const { canvas, ctx, W, H } = s;
+  const pad = { t: 15, r: 15, b: 60, l: 75 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const filtered = data.filter(v => v != null);
+  if (!filtered.length) return;
+  const minVal = Math.min(...filtered), maxVal = Math.max(...filtered);
+  const range = maxVal - minVal || 1;
+
+  // Grid
+  ctx.strokeStyle = "#2a2e3d"; ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.t + cH - (cH * i / 5);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = "#6e7590"; ctx.font = "10px 'JetBrains Mono'"; ctx.textAlign = "right";
+    ctx.fillText(fmtShort(minVal + range * i / 5), pad.l - 8, y + 3);
+  }
+
+  // Line + fill
+  const points = [];
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+  data.forEach((v, i) => {
+    if (v == null) return;
+    const x = pad.l + (i / (data.length - 1 || 1)) * cW;
+    const y = pad.t + cH - ((v - minVal) / range) * cH;
+    points.push({ x, y, val: v, label: labels[i], idx: i });
+    if (points.length === 1) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  if (points.length > 1) {
+    ctx.fillStyle = color + "15"; ctx.beginPath();
+    ctx.moveTo(points[0].x, pad.t + cH);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, pad.t + cH); ctx.fill();
+  }
+
+  // X labels sparse
+  ctx.fillStyle = "#6e7590"; ctx.font = "9px 'DM Sans'"; ctx.textAlign = "right";
+  const step = Math.max(1, Math.floor(labels.length / 8));
+  labels.forEach((l, i) => {
+    if (i % step !== 0 && i !== labels.length - 1) return;
+    const x = pad.l + (i / (labels.length - 1 || 1)) * cW;
+    ctx.save(); ctx.translate(x, H - 18); ctx.rotate(-0.5);
+    ctx.fillText(l.length > 12 ? l.slice(0, 12) : l, 0, 0); ctx.restore();
+  });
+
+  // Hover + Click
+  canvas.onmousemove = e => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const closest = points.reduce((best, p) => (!best || Math.abs(p.x - mx) < Math.abs(best.x - mx) ? p : best), null);
+    canvas.style.cursor = closest && Math.abs(closest.x - mx) < 20 ? "pointer" : "default";
+    if (closest && Math.abs(closest.x - mx) < 20) {
+      showTooltip(e, `<strong>${closest.label}</strong><br>Balance: <span style="color:${color}">PKR ${fmtPKR(closest.val)}</span><br><span style="font-size:10px;color:#6e7590">Click to view transactions</span>`);
+      // Draw highlight dot
+      const s2 = setupCanvas(canvasId, 300); // nah, just overlay isn't easy with canvas. Skip redraw.
+    } else hideTooltip();
+  };
+  canvas.onmouseleave = hideTooltip;
+  canvas.onclick = e => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const closest = points.reduce((best, p) => (!best || Math.abs(p.x - mx) < Math.abs(best.x - mx) ? p : best), null);
+    if (closest && Math.abs(closest.x - mx) < 20 && onClickPoint) { hideTooltip(); onClickPoint(closest.label); }
+  };
+}
+
+function drawDonutChart(canvasId, slices, onClickSlice) {
+  const s = setupCanvas(canvasId, 300);
+  if (!s) return;
+  const { canvas, ctx, W, H } = s;
+  const total = slices.reduce((s, sl) => s + sl.value, 0);
+  if (!total) return;
+
+  const cx = W * 0.32, cy = H / 2, r = Math.min(cx, cy) - 25, inner = r * 0.55;
+  let angle = -Math.PI / 2;
+  const sliceData = [];
+
+  slices.forEach((sl, i) => {
+    const sliceAngle = (sl.value / total) * Math.PI * 2;
+    ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, angle, angle + sliceAngle);
+    ctx.arc(cx, cy, inner, angle + sliceAngle, angle, true);
+    ctx.fill();
+    sliceData.push({ startAngle: angle, endAngle: angle + sliceAngle, ...sl, color: CHART_COLORS[i % CHART_COLORS.length] });
+    angle += sliceAngle;
+  });
+
+  // Center text
+  ctx.fillStyle = "#e2e5eb"; ctx.font = "bold 13px 'DM Sans'"; ctx.textAlign = "center";
+  ctx.fillText("Total", cx, cy - 6);
+  ctx.font = "11px 'JetBrains Mono'";
+  ctx.fillText(fmtShort(total), cx, cy + 12);
+
+  // Legend — right side, with more spacing
+  const lx = W * 0.65;
+  slices.forEach((sl, i) => {
+    const ly = 20 + i * 34;
+    if (ly > H - 20) return;
+    ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+    ctx.beginPath(); ctx.roundRect(lx, ly, 14, 14, 3); ctx.fill();
+    ctx.fillStyle = "#e2e5eb"; ctx.font = "12px 'DM Sans'"; ctx.textAlign = "left";
+    ctx.fillText(sl.label, lx + 20, ly + 11);
+    ctx.fillStyle = "#6e7590"; ctx.font = "10px 'JetBrains Mono'";
+    ctx.fillText(fmtShort(sl.value) + " (" + Math.round(sl.value / total * 100) + "%)", lx + 20, ly + 25);
+  });
+
+  // Hover + Click
+  canvas.onmousemove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const dx = mx - cx, dy = my - cy, dist = Math.sqrt(dx * dx + dy * dy);
+    let hitAngle = Math.atan2(dy, dx);
+    if (hitAngle < -Math.PI / 2) hitAngle += Math.PI * 2;
+    const hit = (dist >= inner && dist <= r) ? sliceData.find(s => hitAngle >= s.startAngle && hitAngle < s.endAngle) : null;
+    canvas.style.cursor = hit ? "pointer" : "default";
+    if (hit) showTooltip(e, `<strong style="color:${hit.color}">${hit.label}</strong><br>PKR ${fmtPKR(hit.value)}<br>${Math.round(hit.value / total * 100)}% of total<br><span style="font-size:10px;color:#6e7590">Click to drill down</span>`);
+    else hideTooltip();
+  };
+  canvas.onmouseleave = hideTooltip;
+  canvas.onclick = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const dx = mx - cx, dy = my - cy, dist = Math.sqrt(dx * dx + dy * dy);
+    let hitAngle = Math.atan2(dy, dx);
+    if (hitAngle < -Math.PI / 2) hitAngle += Math.PI * 2;
+    const hit = (dist >= inner && dist <= r) ? sliceData.find(s => hitAngle >= s.startAngle && hitAngle < s.endAngle) : null;
+    if (hit && onClickSlice) { hideTooltip(); onClickSlice(hit.label); }
+  };
+}
+
+function drawPieChart(canvasId, slices, onClickSlice) {
+  const s = setupCanvas(canvasId, 300);
+  if (!s) return;
+  const { canvas, ctx, W, H } = s;
+  const total = slices.reduce((s, sl) => s + sl.value, 0);
+  if (!total) return;
+
+  const cx = W * 0.3, cy = H / 2, r = Math.min(cx, cy) - 15;
+  let angle = -Math.PI / 2;
+  const sliceData = [];
+
+  slices.forEach((sl, i) => {
+    const sliceAngle = (sl.value / total) * Math.PI * 2;
+    ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, angle, angle + sliceAngle);
+    ctx.fill();
+    sliceData.push({ startAngle: angle, endAngle: angle + sliceAngle, ...sl, color: CHART_COLORS[i % CHART_COLORS.length] });
+    angle += sliceAngle;
+  });
+
+  // Legend — scrollable area on right with compact items
+  const lx = W * 0.6;
+  const maxShow = Math.min(slices.length, 12);
+  slices.slice(0, maxShow).forEach((sl, i) => {
+    const ly = 8 + i * 22;
+    if (ly > H - 10) return;
+    ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+    ctx.fillRect(lx, ly, 10, 10);
+    ctx.fillStyle = "#e2e5eb"; ctx.font = "10px 'DM Sans'"; ctx.textAlign = "left";
+    const lbl = sl.label.length > 12 ? sl.label.slice(0, 12) + "…" : sl.label;
+    ctx.fillText(lbl + " (" + sl.count + ")", lx + 15, ly + 9);
+  });
+  if (slices.length > maxShow) {
+    ctx.fillStyle = "#6e7590"; ctx.font = "10px 'DM Sans'";
+    ctx.fillText("+" + (slices.length - maxShow) + " more...", lx + 15, 8 + maxShow * 22 + 9);
+  }
+
+  // Hover + Click
+  canvas.onmousemove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const dx = mx - cx, dy = my - cy, dist = Math.sqrt(dx * dx + dy * dy);
+    let hitAngle = Math.atan2(dy, dx);
+    if (hitAngle < -Math.PI / 2) hitAngle += Math.PI * 2;
+    const hit = (dist <= r) ? sliceData.find(s => hitAngle >= s.startAngle && hitAngle < s.endAngle) : null;
+    canvas.style.cursor = hit ? "pointer" : "default";
+    if (hit) showTooltip(e, `<strong style="color:${hit.color}">${hit.label}</strong><br>PKR ${fmtPKR(hit.value)}<br>Txns: ${hit.count}<br>${Math.round(hit.value / total * 100)}% of total<br><span style="font-size:10px;color:#6e7590">Click to filter</span>`);
+    else hideTooltip();
+  };
+  canvas.onmouseleave = hideTooltip;
+  canvas.onclick = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const dx = mx - cx, dy = my - cy, dist = Math.sqrt(dx * dx + dy * dy);
+    let hitAngle = Math.atan2(dy, dx);
+    if (hitAngle < -Math.PI / 2) hitAngle += Math.PI * 2;
+    const hit = (dist <= r) ? sliceData.find(s => hitAngle >= s.startAngle && hitAngle < s.endAngle) : null;
+    if (hit && onClickSlice) { hideTooltip(); onClickSlice(hit.label); }
+  };
+}
+
+function fmtPKR(v) { return v.toLocaleString("en-PK", { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+
+function renderSlicerTable(containerId, data, extraCol, drillKey) {
+  let html = `<table class="slicer-table"><thead><tr><th>${extraCol || "Label"}</th><th>Debit</th><th>Credit</th><th>Net</th><th>Count</th></tr></thead><tbody>`;
+  data.forEach(r => {
+    const netCls = r.net >= 0 ? "pos" : "neg";
+    const click = drillKey ? ` onclick="drillDown('${drillKey}','${r.label.replace(/'/g,"\\'")}')" style="cursor:pointer" title="Click to filter table"` : "";
+    html += `<tr${click}><td>${r.label}</td><td class="num neg">${fmtPKR(r.debit)}</td><td class="num pos">${fmtPKR(r.credit)}</td><td class="num ${netCls}">${fmtPKR(r.net)}</td><td class="num">${r.count}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function renderAnalytics() {
+  const ad = computeAnalytics();
+
+  // Bar chart — Monthly Debit vs Credit (click → filter to that month)
+  drawBarChart("chartBar", ad.monthly.map(m => m.label), [
+    { label: "Debit", data: ad.monthly.map(m => m.debit), color: "#f0544f" },
+    { label: "Credit", data: ad.monthly.map(m => m.credit), color: "#34d399" },
+  ], label => drillDownMonth(label));
+
+  // Line chart — Balance trend (click → filter to that date)
+  drawLineChart("chartLine", ad.daily.map(d => d.label), ad.daily.map(d => d.balance), "#3ee8d6",
+    label => drillDown("trans_date", label));
+
+  // Donut — Payment/Receipt split (click → filter by type)
+  drawDonutChart("chartDonut", ad.typeSplit.map(t => ({ label: t.label, value: t.value })),
+    label => { if(S.cols.find(c=>c.key==="_type_col")) drillDown("_type_col", label); else { generateTypeColumn(); setTimeout(()=>drillDown("_type_col", label), 100); }});
+
+  // Pie — Category breakdown (click → search description)
+  drawPieChart("chartPie", ad.categories.map(c => ({ label: c.label, value: c.debit + c.credit, count: c.count })),
+    label => {
+      switchView("table");
+      document.getElementById("filterSearch").value = label === "Other" ? "" : label;
+      applyFilters();
+    });
+
+  // Slicer tables (clickable rows)
+  renderSlicerTable("slicerMonthly", ad.monthly, "Month", null);
+  // Make monthly rows clickable
+  document.querySelectorAll("#slicerMonthly tr[onclick]").forEach(el => el.removeAttribute("onclick"));
+  const mRows = document.querySelectorAll("#slicerMonthly tbody tr");
+  ad.monthly.forEach((m, i) => {
+    if (mRows[i]) { mRows[i].style.cursor = "pointer"; mRows[i].title = "Click to filter"; mRows[i].onclick = () => drillDownMonth(m.label); }
+  });
+
+  renderSlicerTable("slicerBank", ad.banks, "Bank", "bank_name");
+  renderSlicerTable("slicerCategory", ad.categories, "Category", null);
+  // Category click → search
+  const cRows = document.querySelectorAll("#slicerCategory tbody tr");
+  ad.categories.forEach((c, i) => {
+    if (cRows[i]) { cRows[i].style.cursor = "pointer"; cRows[i].title = "Click to filter"; cRows[i].onclick = () => { switchView("table"); document.getElementById("filterSearch").value = c.label === "Other" ? "" : c.label; applyFilters(); }; }
+  });
+
+  // Daily
+  let dhtml = `<table class="slicer-table"><thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th>Count</th><th>Balance</th></tr></thead><tbody>`;
+  ad.daily.forEach(r => {
+    dhtml += `<tr style="cursor:pointer" title="Click to filter" onclick="drillDown('trans_date','${r.label}')"><td>${r.label}</td><td class="num neg">${fmtPKR(r.debit)}</td><td class="num pos">${fmtPKR(r.credit)}</td><td class="num">${r.count}</td><td class="num">${r.balance ? fmtPKR(r.balance) : "—"}</td></tr>`;
+  });
+  dhtml += `</tbody></table>`;
+  document.getElementById("slicerDaily").innerHTML = dhtml;
+}
+
+// ═══════════════════════════════════════════
+// RIGHT-CLICK QUICK EXTRACT MENU
+// ═══════════════════════════════════════════
+let ctxMenu = null;
+
+function showExtractMenu(e, colKey) {
+  e.preventDefault();
+  removeCtxMenu();
+  if (colKey !== "description" && colKey !== "reference") return;
+
+  const items = [
+    { label: "Quick Extract From Column", type: "label" },
+    { icon: "🏦", text: "Account Number", action: () => quickExtract("Account No", colKey, d => { const m = d.match(/(?:ACCT?|A\/C|ACCOUNT)\s*[:\s#]*\s*(\d[\d\-]{4,})/i) || d.match(/(\d{8,25})/); return m ? m[1] : ""; }) },
+    { icon: "📄", text: "Document / Doc No", action: () => quickExtract("Doc No", colKey, d => { const m = d.match(/(?:Doc|Document|Voucher)\s*(?:No\.?\s*)?[:\s#]*\s*(\d+)/i); return m ? m[1] : ""; }) },
+    { icon: "🏢", text: "Branch Code", action: () => quickExtract("Branch", colKey, d => { const m = d.match(/(?:Br|Branch)\s*[:\s#]*\s*(\d+)/i); return m ? m[1] : ""; }) },
+    { icon: "📱", text: "Phone / Mobile Number", action: () => quickExtract("Phone No", colKey, d => { const m = d.match(/((?:\+92|0)\d{9,10})/); return m ? m[1] : ""; }) },
+    { type: "sep" },
+    { icon: "🔤", text: "Text Before First /", action: () => quickExtract("Before /", colKey, d => d.split("/")[0].trim()) },
+    { icon: "🔤", text: "Text After Last /", action: () => quickExtract("After /", colKey, d => { const p = d.split("/"); return p.length > 1 ? p[p.length-1].trim() : ""; }) },
+    { icon: "🔢", text: "All Numbers", action: () => quickExtract("Numbers", colKey, d => { const n = d.match(/\d+/g); return n ? n.join(", ") : ""; }) },
+    { icon: "📝", text: "First 3 Words", action: () => quickExtract("First Words", colKey, d => d.split(/\s+/).slice(0,3).join(" ")) },
+    { type: "sep" },
+    { icon: "🏷️", text: "Transaction Type Keyword", action: () => quickExtract("Txn Type", colKey, d => { const m = d.match(/^([A-Z][A-Z\s]{1,20}?)(?:\s*[:\d\/])/i); return m ? m[1].trim() : d.split(/\s+/).slice(0,2).join(" "); }) },
+    { icon: "📊", text: "Channel (ATM/POS/IBFT...)", action: () => quickExtract("Channel", colKey, d => { d=d.toLowerCase(); if(/atm/i.test(d))return"ATM";if(/pos/i.test(d))return"POS";if(/ibft/i.test(d))return"IBFT";if(/nift/i.test(d))return"NIFT";if(/raast/i.test(d))return"Raast";if(/contra/i.test(d))return"Contra";if(/cheq|chq/i.test(d))return"Cheque";if(/online/i.test(d))return"Online";if(/salary/i.test(d))return"Payroll";return"Other"; }) },
+    { type: "sep" },
+    { icon: "🏷️", text: "Type (Payment/Receipt/Misc)", action: () => { generateTypeColumn(); } },
+  ];
+
+  const menu = document.createElement("div");
+  menu.className = "ctx-menu";
+  items.forEach(item => {
+    if (item.type === "label") {
+      const el = document.createElement("div"); el.className = "ctx-menu-label"; el.textContent = item.label; menu.appendChild(el);
+    } else if (item.type === "sep") {
+      const el = document.createElement("div"); el.className = "ctx-menu-sep"; menu.appendChild(el);
+    } else {
+      const el = document.createElement("div"); el.className = "ctx-menu-item";
+      el.innerHTML = `<span class="ctx-icon">${item.icon}</span>${item.text}`;
+      el.onclick = () => { item.action(); removeCtxMenu(); };
+      menu.appendChild(el);
+    }
+  });
+
+  // Position: add to DOM first (hidden), measure, then place smartly
+  menu.style.visibility = "hidden";
+  menu.style.left = "0px";
+  menu.style.top = "0px";
+  document.body.appendChild(menu);
+
+  const menuH = menu.offsetHeight;
+  const menuW = menu.offsetWidth;
+  const winH = window.innerHeight;
+  const winW = window.innerWidth;
+
+  let left = e.clientX;
+  let top = e.clientY;
+
+  // Flip left if overflows right
+  if (left + menuW > winW - 10) left = winW - menuW - 10;
+  if (left < 5) left = 5;
+
+  // Flip up if overflows bottom
+  if (top + menuH > winH - 10) top = Math.max(10, e.clientY - menuH);
+  if (top < 5) top = 5;
+
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+  menu.style.visibility = "visible";
+  ctxMenu = menu;
+}
+
+function quickExtract(name, srcCol, extractFn) {
+  const key = "c_" + (++cid);
+  for (const row of S.merged) {
+    try { row[key] = extractFn(row[srcCol] || ""); } catch(e) { row[key] = ""; }
+  }
+  S.customDefs.push({ key, label: name, type: "smart", fn: (row) => extractFn(row[srcCol] || ""), prompt: "quick-extract" });
+  S.cols.push({ key, label: name, type: "smart", active: true });
+  doFilter(); render();
+}
+
+function removeCtxMenu() { if (ctxMenu) { ctxMenu.remove(); ctxMenu = null; } }
+document.addEventListener("click", removeCtxMenu);
+document.addEventListener("contextmenu", (e) => {
+  // Only show on description/reference column headers
+  const th = e.target.closest("th");
+  if (!th) return;
+});
+
+render();
+</script>
+</body>
+</html>
