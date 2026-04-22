@@ -614,8 +614,19 @@ function classifyColumn(header) {
   if (/reference|refno|instruno|instrumentno/i.test(n) && !/reference\s*2|reference2/i.test(n))
     return { role: "reference", priority: 8 };
 
+  // ═══ DR/CR FLAG COLUMN (used with single amount to determine direction) ═══
+  // Must check BEFORE Nature to avoid "CR/Dr" being caught as extra
+  if (/dr[\s\/\-]*cr[\s\/\-]*flag|cr[\s\/\-]*dr[\s\/\-]*flag/i.test(nl))
+    return { role: "dc_flag", priority: 10 };
+  if (/^d[\s\/]c$/i.test(nl) || /^dr[\s\/]cr$/i.test(nl) || /^cr[\s\/]dr$/i.test(nl))
+    return { role: "dc_flag", priority: 9 };
+  if (/^dc\s*flag$/i.test(nl) || /^drcr$/i.test(n) || /^crdr$/i.test(n))
+    return { role: "dc_flag", priority: 8 };
+  if (/^dbit[\s\/]*crdt$/i.test(nl) || /^crdt[\s\/]*dbit$/i.test(nl))
+    return { role: "dc_flag", priority: 8 };
+
   // ═══ NATURE / REF# / TYPE / CODE from source (for classification hints) ═══
-  if (/^nature$/i.test(nl) || /^cr[\s\/]*dr$/i.test(nl) || /^dr[\s\/]*cr$/i.test(nl))
+  if (/^nature$/i.test(nl))
     return { role: "extra", priority: 0, extraLabel: "Nature" };
   if (/^ref#$/i.test(nl) || /^ref\s*type$/i.test(nl))
     return { role: "_ref_tag", priority: 0 };
@@ -787,6 +798,7 @@ function processFile(data,fn){
 
   // ── Handle single-amount column (no debit/credit split) ──
   const hasSingleAmount = cm.amount_single !== undefined && cm.debit === undefined && cm.credit === undefined;
+  const hasDcFlag = cm.dc_flag !== undefined;
   // Also handle: if we have credit but no debit (deposit-only statement), or vice versa
   const hasOnlyCredit = cm.credit !== undefined && cm.debit === undefined;
   const hasOnlyDebit = cm.debit !== undefined && cm.credit === undefined;
@@ -813,11 +825,24 @@ function processFile(data,fn){
     let dr = null, cr = null;
 
     if (hasSingleAmount) {
-      // Single amount column — need to figure out direction
+      // Single amount column — use DR/CR flag if available, else use sign
       const amt = pNum(r[cm.amount_single]);
       if (amt !== null) {
-        if (amt < 0) dr = Math.abs(amt);
-        else cr = amt;
+        if (hasDcFlag) {
+          const flag = (r[cm.dc_flag] || "").toString().trim().toUpperCase();
+          if (/^D$|^DR$|^DBIT$|^DEBIT$/.test(flag)) {
+            dr = Math.abs(amt);
+          } else if (/^C$|^CR$|^CRDT$|^CREDIT$/.test(flag)) {
+            cr = Math.abs(amt);
+          } else {
+            // Unknown flag — fall back to sign
+            if (amt < 0) dr = Math.abs(amt);
+            else cr = amt;
+          }
+        } else {
+          if (amt < 0) dr = Math.abs(amt);
+          else cr = amt;
+        }
       }
     } else {
       if (cm.debit !== undefined) dr = pNum(r[cm.debit]);
@@ -1500,6 +1525,9 @@ function classifyType(row) {
     if (/with[\s\-]*holding\s*tax/i.test(descL)) return "Misc Payment";
     if (/tax\s*deducted\s*from/i.test(descL)) return "Misc Payment";
     if (/1%\s*wht/i.test(descL)) return "Misc Payment";
+    // MCB: TBD TAX ON COMMISSION / TBD COMMISSION (tax on bank commission)
+    if (/tbd\s*tax\s*on\s*commission/i.test(descL)) return "Misc Payment";
+    if (/tbd\s*commission/i.test(descL)) return "Misc Payment";
 
     // ── FED (650) ──
     if (/federal\s*excise/i.test(descL)) return "Misc Payment";
@@ -1560,6 +1588,8 @@ function classifyCode(row) {
     if (/^debit\s*wht/i.test(descL)) return bank === "HBL" ? 650 : 900;
     if (/\bwht\b/i.test(descL) && !/clearing/i.test(descL)) return bank === "HBL" ? 650 : 900;
     if (/withholding[\s\-]*tax|with[\s\-]*holding\s*tax|tax\s*deducted|1%\s*wht/i.test(descL)) return bank === "HBL" ? 650 : 900;
+    // MCB: TBD TAX ON COMMISSION / TBD COMMISSION
+    if (/tbd\s*tax\s*on\s*commission|tbd\s*commission/i.test(descL)) return 900;
     // 650: FED
     if (/federal\s*excise|^fed[\s\/]|fed\/pst|pst\s*on\s*bank|^fed\s+612|fed\s*on\s*pmt/i.test(descL)) return 650;
     // 700: Bank Charges
